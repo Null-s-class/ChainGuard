@@ -6,3 +6,4 @@ Processdata/*.csv
 Processdata/*.txt
 extract_data.pkl
 GCB.txt
+__pycache__/*
