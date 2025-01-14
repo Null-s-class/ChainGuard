@@ -1,4 +1,4 @@
-./Data/*
-./GCB/*
-./saved_models/*
-./parser/*
+Data/*
+GCB/*
+saved_models/*
+parser/*
