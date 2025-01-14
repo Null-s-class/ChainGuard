@@ -2,3 +2,7 @@ Data/*
 GCB/*
 saved_models/*
 parser/*
+Processdata/*.csv
+Processdata/*.txt
+extract_data.pkl
+GCB.txt
