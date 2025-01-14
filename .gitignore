@@ -1,9 +1,7 @@
 Data/*
-Data.7z
 GCB/*
 saved_models/*
 parser/*
-parser.7z
 Processdata/*.csv
 Processdata/*.txt
 extract_data.pkl
