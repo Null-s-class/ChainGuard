@@ -13,9 +13,11 @@ python run.py \
     --train_batch_size 4 \
     --eval_batch_size 16 \
     --learning_rate 2e-5 \
-    --max_grad_norm 1.0 \clear
+    --max_grad_norm 1.0 \ 
     --evaluate_during_training \
     --seed 123456 2>&1| tee saved_models/train.log
+
+    
 
 python run.py \
     --output_dir=saved_models \
