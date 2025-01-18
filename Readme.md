@@ -7,7 +7,7 @@ python run.py \
     --train_data_file=Data/Dataset/data.txt \
     --eval_data_file=Data/Dataset/Valid.txt \
     --test_data_file=Data/Dtaset/Test.txt \
-    --epoch 1 \
+    --epoch 5 \
     --code_length 512 \
     --data_flow_length 128 \
     --train_batch_size 4 \
