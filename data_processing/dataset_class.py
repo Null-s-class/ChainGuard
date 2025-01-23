@@ -58,7 +58,8 @@ for lang in dfg_function:
     parser = [parser,dfg_function[lang]]    
     parsers[lang]= parser
     
-    
+logger = logging.getLogger(__name__)
+
 ######### Dinh dang cua input cho model #########
 class InputFeatures(object):
     """A single training/test features for an example."""
@@ -130,8 +131,8 @@ def convert_examples_to_features(item):
 
 ######### Class Dataset #########
 class TextDataset(Dataset):
-    def __init__(self, tokenizer, args, DRY_RUN_MODE = False, DRY_RUN_DATA = None):
-        self.file_path = args.train_data_file
+    def __init__(self, tokenizer, args, file_path = "", DRY_RUN_MODE = False, DRY_RUN_DATA = None):
+        self.file_path = file_path
         self.examples = []
         self.args=args
         index_filename = self.args.train_data_file #chua danh sach index cua file tranning set valid set hoac test set
@@ -142,7 +143,7 @@ class TextDataset(Dataset):
         index_to_bytecode = {}
         index_to_opcode = {}
 
-        with open('Data/Dataset/datatest.jsonl') as f: 
+        with open('Data/Dataset/data.jsonl') as f: 
             for line in f:
                 line=line.strip()
                 js=json.loads(line)
@@ -203,17 +204,17 @@ class TextDataset(Dataset):
         #logger.info('seld examples %s', self.examples)
 
 
-        if 'train' in self.file_path:
-            for idx, example in enumerate(self.examples[:3]): #moi line example chua cac thuoc tinh source_tokens_1,source_ids_1,position_idx_1
-                # logger.info("*** Example ***")
-                # logger.info("idx: {}".format(idx))
-                # logger.info("label: {}".format(example.label))
-                # logger.info("input_tokens_1: {}".format([x.replace('\u0120','_') for x in example.input_tokens]))
-                # logger.info("input_ids_1: {}".format(' '.join(map(str, example.input_ids))))       
-                # logger.info("position_idx_1: {}".format(example.position_idx))
-                # logger.info("dfg_to_code_1: {}".format(' '.join(map(str, example.dfg_to_code))))
-                # logger.info("dfg_to_dfg_1: {}".format(' '.join(map(str, example.dfg_to_dfg))))
-                print("x")
+        # if 'train' in self.file_path:
+        #     for idx, example in enumerate(self.examples[:3]): #moi line example chua cac thuoc tinh source_tokens_1,source_ids_1,position_idx_1
+        #         logger.info("*** Example ***")
+        #         logger.info("idx: {}".format(idx))
+        #         logger.info("label: {}".format(example.label))
+        #         logger.info("input_tokens_1: {}".format([x.replace('\u0120','_') for x in example.input_tokens]))
+        #         logger.info("input_ids_1: {}".format(' '.join(map(str, example.input_ids))))       
+        #         logger.info("position_idx_1: {}".format(example.position_idx))
+        #         logger.info("dfg_to_code_1: {}".format(' '.join(map(str, example.dfg_to_code))))
+        #         logger.info("dfg_to_dfg_1: {}".format(' '.join(map(str, example.dfg_to_dfg))))
+                
                 
 
     def __len__(self):

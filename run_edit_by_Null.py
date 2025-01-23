@@ -39,7 +39,7 @@ DEF_MAX_GRAD_NORM = 1.0
 DRY_RUN_MODE = False
 DRY_RUN_DATA = 0.1 # only used 10% of the original data to test 
 
-DEF_MODEL_VER = '1'
+DEF_MODEL_VER = '1_Null'
 DEF_MODEL_CHECKPOINT_DIR= 'checkpoint-best-f1'
 os.makedirs(DEF_MODEL_CHECKPOINT_DIR, exist_ok=True)
 
@@ -54,17 +54,18 @@ def set_seed(seed, n_gpu):
     if n_gpu > 0:
         torch.cuda.manual_seed_all(seed)
 
-def train(args, train_dataset, model, tokenizer):
+def train(args, model, tokenizer):
     """
     Model Training Function with Optimized Components
     """
     # Data Preparation
+    train_dataset = TextDataset(tokenizer, args, args.train_data_file, DRY_RUN_MODE = DRY_RUN_MODE, DRY_RUN_DATA = DRY_RUN_DATA)
     train_sampler = RandomSampler(train_dataset)
     train_dataloader = DataLoader(
         train_dataset, 
         sampler=train_sampler, 
         batch_size=args.train_batch_size, 
-        num_workers=10
+        num_workers=16
     )
     
     # Optimization Configuration
@@ -140,7 +141,7 @@ def train(args, train_dataset, model, tokenizer):
                 global_step += 1
                 
                 # Periodic Evaluation and Model Saving
-                if global_step % args.save_steps == 0:
+                if (global_step == 0 or  args.save_steps == 0 or global_step % args.save_steps == 0):
                     results = evaluate(args, model, tokenizer, eval_when_training=True)
                     
                     if results['eval_f1'] > best_f1:
@@ -178,6 +179,8 @@ def evaluate(args, model, tokenizer, eval_when_training=False):
     # Multi-GPU Handling
     if args.n_gpu > 1 and not eval_when_training:
         model = torch.nn.DataParallel(model)
+    else:
+        model = model.to(args.device)
     
     # Evaluation Logging
     logger.info("***** Running Evaluation *****")
@@ -215,6 +218,59 @@ def evaluate(args, model, tokenizer, eval_when_training=False):
     
     return {f"eval_{k}": v for k, v in metrics.items()}
 
+
+def test(args, model, tokenizer, eval_when_training=False):
+    """Model Test Function with Detailed Metrics"""
+    # Dataset and Dataloader Setup
+    test_dataset = TextDataset(tokenizer, args, file_path=args.test_data_file)
+    test_sampler = SequentialSampler(test_dataset)
+    test_dataloader = DataLoader(
+        test_dataset, 
+        sampler=test_sampler, 
+        batch_size=args.test_batch_size, 
+        num_workers=4
+    )
+    
+    # Multi-GPU Handling
+    if args.n_gpu > 1 :
+        model = torch.nn.DataParallel(model)
+    else:
+        model = model.to(args.device)
+    # Test Logging
+    logger.info("***** Running Testing *****")
+    logger.info(f"  Total Examples: {len(test_dataset)}")
+    
+    # Prediction Collection
+    model.eval()
+    all_logits, all_labels = [], []
+    
+    with torch.no_grad():
+        for batch in tqdm(test_dataloader, desc="Evaluating"):
+            inputs = [x.to(args.device) for x in batch]
+            inputs_ids, position_idx, attn_mask, bytecode_embedding, opcode_tensor, labels = inputs
+            
+            _, logit = model(inputs_ids, position_idx, attn_mask, bytecode_embedding, opcode_tensor, labels)
+            
+            all_logits.append(logit.cpu().numpy())
+            all_labels.append(labels.cpu().numpy())
+    
+    # Performance Metrics Calculation
+    logits = np.concatenate(all_logits, axis=0)
+    labels = np.concatenate(all_labels, axis=0)
+    
+    metrics = {
+        "recall": recall_score(labels, logits, average='weighted'),
+        "precision": precision_score(labels, logits, average='weighted'),
+        "f1": f1_score(labels, logits, average='weighted'),
+        "accuracy": accuracy_score(labels, logits)
+    }
+    
+    # Logging Results
+    logger.info("***** Test Results *****")
+    for key, value in metrics.items():
+        logger.info(f"  {key.capitalize()}: {value:.4f}")
+    
+    return {f"test_{k}": v for k, v in metrics.items()}
 
 
 
@@ -328,8 +384,8 @@ def main():
 
     # Training
     if args.do_train:
-        train_dataset = TextDataset(tokenizer, args, DRY_RUN_MODE = DRY_RUN_MODE, DRY_RUN_DATA = DRY_RUN_DATA)
-        train(args, train_dataset, model, tokenizer)
+        model.to(args.device)
+        train(args, model, tokenizer)
 
     # Evaluation
     results = {}
@@ -346,10 +402,11 @@ def main():
         output_dir = os.path.join(args.output_dir, '{}'.format(checkpoint_prefix))  
         model.load_state_dict(torch.load(output_dir, weights_only = True))
         model.to(args.device)
-        test(args, model, tokenizer, best_threshold=0.5)
+        test(args, model, tokenizer)
 
     return results
 
 
 if __name__ == "__main__":
-    main()
+    results = main()
+    logger.info(f"   Result: \n\n###########################\n {results} \n###########################")
