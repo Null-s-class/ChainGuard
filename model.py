@@ -88,16 +88,16 @@ class Model(nn.Module):
         opcode_transformed = self.opcode_dense(opcode_transformed)  # [batch_size, 512, 768]
         #print('Shape of opcode after transform', opcode_transformed.shape,'\n')
 
-        print('Shape of Inputs_embedidng', inputs_embeddings.shape)
+        #print('Shape of Inputs_embedidng', inputs_embeddings.shape)
         #Shape of inputs embeeing torch.Size([8, 640, 768])0700
         inputs_embeddings = torch.cat([inputs_embeddings,bytecode_embedding,opcode_transformed],dim=1)
 
-        print('Shape final', inputs_embeddings.shape)
+        #print('Shape final', inputs_embeddings.shape)
         #shape is [batch_size, 860,768]
 
         attn_mask = self.expand_tensor_with_padding(attn_mask,inputs_embeddings.size(dim=1))#1110)
         position_idx = self.expand_tensor_with_positionidx(position_idx,inputs_embeddings.size(dim=1))#1110)
-        print('Shape of attn_mask',attn_mask.shape)
+        #print('Shape of attn_mask',attn_mask.shape)
         #print('Shape of position', position_idx.shape)
         # Encode with RoBERTa
         #print('Shape of inputs_embedding after plus', inputs_embeddings.shape)

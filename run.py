@@ -659,7 +659,7 @@ def main():
     # Set seed
     set_seed(args)
     config = RobertaConfig.from_pretrained(args.config_name if args.config_name else args.model_name_or_path)
-    config.num_labels=6
+    config.num_labels=10
     tokenizer = RobertaTokenizer.from_pretrained(args.tokenizer_name if args.tokenizer_name else args.model_name_or_path, clean_up_tokenization_spaces = False)# su dung tokenizer tu pretrainmodel
     #model = RobertaModel.from_pretrained(args.model_name_or_path, config=config)  # Dùng encoder từ mô hình pre-trained
     model = RobertaForSequenceClassification.from_pretrained(args.model_name_or_path,config=config) #encoder ma hoa model ma hoa
