@@ -26,14 +26,14 @@ from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from torch.nn import BCEWithLogitsLoss
 
-from data_preprocessing.dataset_class import TextDataset
+from data_processing.dataset_class import TextDataset
 
 cpu_cont = 16
 def_seed = 42
 def_n_labels = 10
 def_model_ver = '1'
 def_model_checkpoint_dir= 'checkpoint-best-f1'
-os.mkdir(def_model_checkpoint_dir, exist_only=True)
+os.makedirs(def_model_checkpoint_dir, exist_ok=True)
 
 logger = logging.getLogger(__name__)
 
@@ -323,13 +323,13 @@ def main():
     dryrun = False
     n_samples = 500
     if dryrun:
-
+        print(f'DRYRUN: Running on {n_samples} samples')
     # Set model ver
     model_ver = def_model_ver
 
     # Setup logging
     logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',datefmt='%m/%d/%Y %H:%M:%S',level=logging.INFO)
-    logger.warning("device: %s, n_gpu: %s",device, args.n_gpu)
+    
 
     # Setup CUDA, GPU
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -340,7 +340,8 @@ def main():
     # device = torch.device("cpu")
     # args.n_gpu = 0  # No GPUs are being used
     # args.device = device
-
+    
+    logger.warning("device: %s, n_gpu: %s",device, args.n_gpu)
     # Set seed
     set_seed(args.seed, args.n_gpu)
 
