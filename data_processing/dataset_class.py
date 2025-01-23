@@ -155,7 +155,7 @@ class TextDataset(Dataset):
         #logger.info('loaded Data')
         #logger.info('df_bytecode :n%s', df_bytecode)
 
-        bytecode_embedding, bytecode_index = preprocess_bytecode(df_bytecode,max_length=self.data_max_size) #embedding bytecode
+        bytecode_embedding, bytecode_index = preprocess_bytecode(df_bytecode,max_length= 512 ) #limit due to pretrain model #self.data_max_size) #embedding bytecode
         #print('Processed bytecode')
         #logger.info('byte code embedding%s', bytecode_embedding.shape,'\n')
         #logger.info('bytecode index%s',bytecode_index,'\n')
