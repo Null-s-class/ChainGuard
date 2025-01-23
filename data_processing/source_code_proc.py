@@ -13,26 +13,9 @@ import numpy as np
 import joblib
 import torch
 import pandas as pd
-from torch.utils.data import DataLoader, Dataset, SequentialSampler, RandomSampler,TensorDataset
-from torch.utils.data.distributed import DistributedSampler
-from transformers import (WEIGHTS_NAME, AdamW, get_linear_schedule_with_warmup,
-                          RobertaConfig, RobertaForSequenceClassification, RobertaTokenizer, RobertaModel, BertModel, BertTokenizer)
-from tqdm import tqdm, trange
-import multiprocessing
-from model import Model
-from sklearn.metrics import f1_score, recall_score, precision_score, accuracy_score
-from tensorflow.keras.preprocessing.text import Tokenizer
-from tensorflow.keras.preprocessing.sequence import pad_sequences
-from torch.nn import BCEWithLogitsLoss
-
-cpu_cont = 16
-logger = logging.getLogger(__name__)
-
-from parser import DFG_python,DFG_java,DFG_ruby,DFG_go,DFG_php,DFG_javascript
-from parser import (remove_comments_and_docstrings,
-                   tree_to_token_index,
-                   index_to_code_token,
-                   tree_to_variable_index)    
+from transformers import RobertaTokenizer
+from parser import DFG_python, DFG_java, DFG_ruby, DFG_go, DFG_php, DFG_javascript
+from parser import tree_to_token_index, index_to_code_token
 from tree_sitter import Language, Parser
 
 dfg_function={

@@ -1,29 +1,11 @@
 from __future__ import absolute_import, division, print_function
 
-import argparse
-import glob
 import logging
-import os
-import pickle
-import random
-import re
-import shutil
-import json
 import numpy as np
-import joblib
 import torch
 import pandas as pd
-from torch.utils.data import DataLoader, Dataset, SequentialSampler, RandomSampler,TensorDataset
-from torch.utils.data.distributed import DistributedSampler
-from transformers import (WEIGHTS_NAME, AdamW, get_linear_schedule_with_warmup,
-                          RobertaConfig, RobertaForSequenceClassification, RobertaTokenizer, RobertaModel, BertModel, BertTokenizer)
-from tqdm import tqdm, trange
-import multiprocessing
-from model import Model
-from sklearn.metrics import f1_score, recall_score, precision_score, accuracy_score
-from tensorflow.keras.preprocessing.text import Tokenizer
-from tensorflow.keras.preprocessing.sequence import pad_sequences
-from torch.nn import BCEWithLogitsLoss
+from transformers import BertModel, BertTokenizer
+from tqdm import tqdm
 
 cpu_cont = 16
 logger = logging.getLogger(__name__)

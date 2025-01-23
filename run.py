@@ -173,7 +173,7 @@ def preprocess_bytecode(bytecode, max_length = 512, batch_size = 32):
         end_idx = min((batch_idx + 1) * batch_size, num_sample)
         batch_bytecodes = bytecode['bytecode'].iloc[start_idx:end_idx]
         batch_indices = bytecode['index'].iloc[start_idx:end_idx] 
-        logger.info(f'number of sample in a batch {end_idx-start_idx}')
+        #logger.info(f'number of sample in a batch {end_idx-start_idx}')
         tokenized_texts = tokenizer(batch_bytecodes.tolist(), max_length=max_length, truncation= True, padding= 'max_length', return_tensors= 'pt')
         with torch.no_grad():
             outputs = modelBert(**tokenized_texts)
@@ -194,17 +194,21 @@ def clean_opcode(opcode_str):
 
 def process_opcode(opcode):
     Vocab_of_size = opcode['opcode'].nunique()
-
+    #print(opcode['opcode'])
+    opcode['opcode']= opcode['opcode'].str.split().apply(lambda x: ' '.join(x[:640]) if len(x) > 640 else ' '.join(x))
+    #print(opcode['opcode'])
     length = opcode['opcode'].str.split().apply(len)
     avg_length = int(length.mean())
     maxlength = avg_length
 
-    logger.info(f'Average of length {maxlength}')
+    logger.info(f'Average of length {maxlength} (must be convert to 640 for now)')
+
+
     embedding_size = 256
     tokenizer = Tokenizer(num_words = Vocab_of_size)
     tokenizer.fit_on_texts(opcode['opcode']) #xay dung tu dien 
     sequences = tokenizer.texts_to_sequences(opcode['opcode']) #chuyen sequence ve mang interger
-    opcode_matrix = pad_sequences(sequences,maxlen=maxlength) #padding ve cung 1 size 
+    opcode_matrix = pad_sequences(sequences,maxlen=maxlength)#padding ve cung 1 size 
     opcode_tensor = torch.tensor(opcode_matrix) #chuyen ve tensor 
     index_list = opcode['index'].tolist()
     result_dict = {index_list[i]: opcode_tensor[i] for i in range(len(index_list))}
@@ -273,7 +277,8 @@ class TextDataset(Dataset):
         #only use 10% valid data_source to keep best model        
         if 'valid' in file_path:
             data_source=random.sample(data_source,int(len(data_source)*0.1))
-            
+
+        
         #convert example to input features    
         self.examples=[convert_examples_to_features(x) for x in tqdm(data_source,total=len(data_source))]
         #self.examples la 1 mang Inputfeature cho tung sample
@@ -285,13 +290,13 @@ class TextDataset(Dataset):
         if 'train' in file_path:
             for idx, example in enumerate(self.examples[:3]): #moi line example chua cac thuoc tinh source_tokens_1,source_ids_1,position_idx_1
                 logger.info("*** Example ***")
-                logger.info("idx: {}".format(idx))
-                logger.info("label: {}".format(example.label))
-                logger.info("input_tokens_1: {}".format([x.replace('\u0120','_') for x in example.input_tokens]))
-                logger.info("input_ids_1: {}".format(' '.join(map(str, example.input_ids))))       
-                logger.info("position_idx_1: {}".format(example.position_idx))
-                logger.info("dfg_to_code_1: {}".format(' '.join(map(str, example.dfg_to_code))))
-                logger.info("dfg_to_dfg_1: {}".format(' '.join(map(str, example.dfg_to_dfg))))
+                # logger.info("idx: {}".format(idx))
+                # logger.info("label: {}".format(example.label))
+                # logger.info("input_tokens_1: {}".format([x.replace('\u0120','_') for x in example.input_tokens]))
+                # logger.info("input_ids_1: {}".format(' '.join(map(str, example.input_ids))))       
+                # logger.info("position_idx_1: {}".format(example.position_idx))
+                # logger.info("dfg_to_code_1: {}".format(' '.join(map(str, example.dfg_to_code))))
+                # logger.info("dfg_to_dfg_1: {}".format(' '.join(map(str, example.dfg_to_dfg))))
                 
 
     def __len__(self):
@@ -515,8 +520,8 @@ def evaluate(args, model, tokenizer, eval_when_training=False):
 
     #y_preds=logits[:,1]>best_threshold
     y_preds = logits
-    print('prediction',y_preds)
-    print('label truth',y_trues)
+    #print('prediction',y_preds)
+    #print('label truth',y_trues)
     recall=recall_score(y_trues, y_preds, average='weighted')
     precision=precision_score(y_trues, y_preds,  average='weighted')   
     f1=f1_score(y_trues, y_preds, average='weighted')      
@@ -654,7 +659,7 @@ def main():
     # Set seed
     set_seed(args)
     config = RobertaConfig.from_pretrained(args.config_name if args.config_name else args.model_name_or_path)
-    config.num_labels=6
+    config.num_labels=10
     tokenizer = RobertaTokenizer.from_pretrained(args.tokenizer_name if args.tokenizer_name else args.model_name_or_path, clean_up_tokenization_spaces = False)# su dung tokenizer tu pretrainmodel
     #model = RobertaModel.from_pretrained(args.model_name_or_path, config=config)  # Dùng encoder từ mô hình pre-trained
     model = RobertaForSequenceClassification.from_pretrained(args.model_name_or_path,config=config) #encoder ma hoa model ma hoa

@@ -16,8 +16,12 @@ python RUN2.py \
     --max_grad_norm 1.0 \ 
     --seed 123456 2>&1| tee saved_models/train.log
 
-    
+ --train_data_file=Data/Dataset/data.txt \
+--eval_data_file=Data/Dataset/Valid.txt \
+--test_data_file=Data/Dtaset/Test.txt \
+--epoch 5 \
 --evaluate_during_training \
+
 python run.py \
     --output_dir=saved_models \
     --config_name=microsoft/graphcodebert-base \
