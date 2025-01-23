@@ -13,30 +13,16 @@ import numpy as np
 import joblib
 import torch
 import pandas as pd
-import multiprocessing
 
+from torch.utils.data import Dataset
 
-from torch.utils.data import DataLoader, Dataset, SequentialSampler, RandomSampler,TensorDataset
-from torch.utils.data.distributed import DistributedSampler
-from transformers import (WEIGHTS_NAME, AdamW, get_linear_schedule_with_warmup,
-                          RobertaConfig, RobertaForSequenceClassification, RobertaTokenizer, RobertaModel, BertModel, BertTokenizer)
-from tqdm import tqdm, trange
-from model import Model
-from sklearn.metrics import f1_score, recall_score, precision_score, accuracy_score
-from tensorflow.keras.preprocessing.text import Tokenizer
-from tensorflow.keras.preprocessing.sequence import pad_sequences
-from torch.nn import BCEWithLogitsLoss
-
+from tqdm import tqdm
 
 from data_processing.bytecode_proc import preprocess_bytecode
 from data_processing.opcode_proc import process_opcode
 from data_processing.source_code_proc import extract_dataflow
 
 from parser import DFG_python,DFG_java,DFG_ruby,DFG_go,DFG_php,DFG_javascript
-from parser import (remove_comments_and_docstrings,
-                   tree_to_token_index,
-                   index_to_code_token,
-                   tree_to_variable_index)
 from tree_sitter import Language, Parser
 
 dfg_function={
@@ -135,6 +121,7 @@ class TextDataset(Dataset):
         self.file_path = file_path
         self.examples = []
         self.args=args
+        self.data_max_size = self.args.hidden_size #768
         index_filename = self.args.train_data_file #chua danh sach index cua file tranning set valid set hoac test set
         #self.bytecode_embedding = bytecode_embeddings
         #load index
@@ -162,13 +149,13 @@ class TextDataset(Dataset):
         df_opcode.reset_index(inplace=True)
         
         #Process opcode
-        opcode_matrix = process_opcode(df_opcode)
+        opcode_matrix = process_opcode(df_opcode, max_length=self.data_max_size )
         #print('Processed opcode: ',opcode_matrix,'\n')
     
         #logger.info('loaded Data')
         #logger.info('df_bytecode :n%s', df_bytecode)
 
-        bytecode_embedding, bytecode_index = preprocess_bytecode(df_bytecode[:70],max_length=20) #embedding bytecode
+        bytecode_embedding, bytecode_index = preprocess_bytecode(df_bytecode,max_length=self.data_max_size) #embedding bytecode
         #print('Processed bytecode')
         #logger.info('byte code embedding%s', bytecode_embedding.shape,'\n')
         #logger.info('bytecode index%s',bytecode_index,'\n')

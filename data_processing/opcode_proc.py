@@ -16,19 +16,19 @@ def clean_opcode(opcode_str):
     #codes = re.findall(r'[A-Z]+', opcode_str)
     return opcode_str
 
-def process_opcode(opcode):
+def process_opcode(opcode, max_length= 512):
     Vocab_of_size = opcode['opcode'].nunique()
 
     length = opcode['opcode'].str.split().apply(len)
     avg_length = int(length.mean())
     maxlength = avg_length
 
-    logger.info(f'Average of length {maxlength}')
-    embedding_size = 256
+    logger.info(f'Average of length {maxlength} now reduced to {max_length}')
+
     tokenizer = Tokenizer(num_words = Vocab_of_size)
     tokenizer.fit_on_texts(opcode['opcode']) #xay dung tu dien 
     sequences = tokenizer.texts_to_sequences(opcode['opcode']) #chuyen sequence ve mang interger
-    opcode_matrix = pad_sequences(sequences,maxlen=maxlength) #padding ve cung 1 size 
+    opcode_matrix = pad_sequences(sequences,maxlen=max_length) #padding ve cung 1 size 
     opcode_tensor = torch.tensor(opcode_matrix) #chuyen ve tensor 
     index_list = opcode['index'].tolist()
     result_dict = {index_list[i]: opcode_tensor[i] for i in range(len(index_list))}

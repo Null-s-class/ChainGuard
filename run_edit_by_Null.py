@@ -59,6 +59,8 @@ def train(args, model, tokenizer):
     Model Training Function with Optimized Components
     """
     # Data Preparation
+    args.hidden_size = model.config.hidden_size
+    print(f"MODEL HIDDEN: {args.hidden_size}\n")
     train_dataset = TextDataset(tokenizer, args, args.train_data_file, DRY_RUN_MODE = DRY_RUN_MODE, DRY_RUN_DATA = DRY_RUN_DATA)
     train_sampler = RandomSampler(train_dataset)
     train_dataloader = DataLoader(

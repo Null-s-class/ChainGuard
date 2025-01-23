@@ -3,7 +3,6 @@ from __future__ import absolute_import, division, print_function
 import logging
 import numpy as np
 import torch
-import pandas as pd
 from transformers import BertModel, BertTokenizer
 from tqdm import tqdm
 

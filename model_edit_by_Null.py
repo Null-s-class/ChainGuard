@@ -1,11 +1,10 @@
 import torch
 import torch.nn as nn
 import torch
-from torch.autograd import Variable
-import copy
 import torch.nn.functional as F
-from torch.nn import CrossEntropyLoss, MSELoss
-import transformers
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class RobertaClassificationHead(nn.Module):
