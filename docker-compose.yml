@@ -1,0 +1,22 @@
+services:
+  chainguard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    #ports:
+      #- 6006:6006
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    volumes: # docker run -v
+      - .:/app/chainguard
+   
+    working_dir: /app/chainguard
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    tty: true # not stop after build = docker run -t
