@@ -32,8 +32,33 @@ from data_processing.bytecode_proc import preprocess_bytecode
 from data_processing.opcode_proc import process_opcode
 from data_processing.source_code_proc import extract_dataflow
 
+from parser import DFG_python,DFG_java,DFG_ruby,DFG_go,DFG_php,DFG_javascript
+from parser import (remove_comments_and_docstrings,
+                   tree_to_token_index,
+                   index_to_code_token,
+                   tree_to_variable_index)
+from tree_sitter import Language, Parser
 
+dfg_function={
+    'python':DFG_python,
+    'java':DFG_java,
+    'ruby':DFG_ruby,
+    'go':DFG_go,
+    'php':DFG_php,
+    'javascript':DFG_javascript
+}
 
+#load parsers
+#Create a dictionary for progamming language suit with data source code chua cac bo phan tich 
+parsers={}        
+for lang in dfg_function:
+    LANGUAGE = Language('parser/my-languages.so', lang)
+    parser = Parser()
+    parser.set_language(LANGUAGE) 
+    parser = [parser,dfg_function[lang]]    
+    parsers[lang]= parser
+    
+    
 ######### Dinh dang cua input cho model #########
 class InputFeatures(object):
     """A single training/test features for an example."""
@@ -105,7 +130,8 @@ def convert_examples_to_features(item):
 
 ######### Class Dataset #########
 class TextDataset(Dataset):
-    def __init__(self, tokenizer, args):
+    def __init__(self, tokenizer, args, DRY_RUN_MODE = False, DRY_RUN_DATA = None):
+        self.file_path = args.train_data_file
         self.examples = []
         self.args=args
         index_filename = self.args.train_data_file #chua danh sach index cua file tranning set valid set hoac test set
@@ -116,7 +142,7 @@ class TextDataset(Dataset):
         index_to_bytecode = {}
         index_to_opcode = {}
 
-        with open('Data/Dataset/data.jsonl') as f: 
+        with open('Data/Dataset/datatest.jsonl') as f: 
             for line in f:
                 line=line.strip()
                 js=json.loads(line)
@@ -134,6 +160,7 @@ class TextDataset(Dataset):
         df_opcode.index.name = 'index'
         df_opcode.reset_index(inplace=True)
         
+        #Process opcode
         opcode_matrix = process_opcode(df_opcode)
         #print('Processed opcode: ',opcode_matrix,'\n')
     
@@ -165,7 +192,7 @@ class TextDataset(Dataset):
                 data_source.append((url1,labels,tokenizer, args, cache ,index_to_sourcecode,embedding_code, opcode_tensor))
                 
         # only use 10% valid data_source to keep best model        
-        if 'valid' in file_path:
+        if 'valid' in self.file_path:
             data_source=random.sample(data_source,int(len(data_source)*0.1))
             
         #convert example to input features    
@@ -176,7 +203,7 @@ class TextDataset(Dataset):
         #logger.info('seld examples %s', self.examples)
 
 
-        if 'train' in file_path:
+        if 'train' in self.file_path:
             for idx, example in enumerate(self.examples[:3]): #moi line example chua cac thuoc tinh source_tokens_1,source_ids_1,position_idx_1
                 # logger.info("*** Example ***")
                 # logger.info("idx: {}".format(idx))

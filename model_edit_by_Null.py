@@ -10,7 +10,6 @@ import transformers
 
 class RobertaClassificationHead(nn.Module):
     """Head for sentence-level classification tasks."""
-
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Linear(config.hidden_size, config.hidden_size)
@@ -29,15 +28,18 @@ class RobertaClassificationHead(nn.Module):
 
 
 class Model(nn.Module):   
-    def __init__(self, encoder, config, tokenizer, args):
+    def __init__(self, encoder, config, tokenizer, args , num_classes=10):
         super(Model, self).__init__()
+        self.num_classes = num_classes
         self.encoder = encoder
         self.config = config
         self.tokenizer = tokenizer
         self.classifier = RobertaClassificationHead(config)
+        self.hidden_size = config.hidden_size
         self.args = args
-        self.opcode_dense = nn.Linear(1,768)
-        self.attention = nn.MultiheadAttention(embed_dim=768, num_heads=8)
+        self.opcode_dense = nn.Linear(1,self.hidden_size)
+        self.attention = nn.MultiheadAttention(embed_dim=self.hidden_size, num_heads=8)
+        self.model_info_show = False
     
     @staticmethod
     def expand_tensor_with_padding(tensor, new_size):
@@ -54,74 +56,75 @@ class Model(nn.Module):
         return padded_tensor
 
     def forward(self, inputs_ids, position_idx, attn_mask, bytecode_embedding, opcode_tensor, labels=None):
-        bs, l = inputs_ids.size()
+        """
+        Forward pass for the model with enhanced embedding processing and classification.
         
-        # Embedding
+        Args:
+            inputs_ids (torch.Tensor): Input token IDs
+            position_idx (torch.Tensor): Position indices for tokens
+            attn_mask (torch.Tensor): Attention mask
+            bytecode_embedding (torch.Tensor): Bytecode embedding
+            opcode_tensor (torch.Tensor): Opcode tensor
+            labels (torch.Tensor, optional): Ground truth labels
+        
+        Returns:
+            Union[Tuple[torch.Tensor, torch.Tensor], torch.Tensor]: 
+            Loss and prediction if labels are provided, otherwise prediction probabilities
+        """
+        # Process node and token embeddings
         nodes_mask = position_idx.eq(0)
         token_mask = position_idx.ge(2)
         inputs_embeddings = self.encoder.roberta.embeddings.word_embeddings(inputs_ids)
 
-
+        # Compute average embeddings for nodes
         nodes_to_token_mask = nodes_mask[:, :, None] & token_mask[:, None, :] & attn_mask
         nodes_to_token_mask = nodes_to_token_mask / (nodes_to_token_mask.sum(-1) + 1e-10)[:, :, None]
         avg_embeddings = torch.einsum("abc,acd->abd", nodes_to_token_mask, inputs_embeddings)
         inputs_embeddings = inputs_embeddings * (~nodes_mask)[:, :, None] + avg_embeddings * nodes_mask[:, :, None]
 
-        # print('Shape of inputs_embedding', inputs_embeddings.shape)
-        # print('Shape of input_ids', inputs_ids.shape)
-        # print('Shape of input_ids', position_idx.shape)
-        # print('Shape of input_ids', attn_mask.shape)
-        # print('Shape of bytecode embedding', bytecode_embedding.shape)
-        # print('Shape of opcode', opcode_tensor.shape)
-        # print('opcode receivrd from extract', opcode_tensor)
-        # print('bytecode recevied from extract', bytecode_embedding)
-        # print('input embediign ', inputs_embeddings)
-        # print('Position_idx', position_idx)
-        # print('attn_mask',attn_mask)
-
-        inputs_embeddings[:, :opcode_tensor.size(1), :opcode_tensor.size(1)] += opcode_tensor.unsqueeze(2)
-        opcode_tensor =opcode_tensor.float()
-        #opcode_transformed = self.opcode_dense(opcode_tensor)
-
+        # Transform and incorporate opcode embeddings
+        opcode_tensor = opcode_tensor.float()
         opcode_transformed = opcode_tensor.unsqueeze(-1)  # [batch_size, 512, 1]
         opcode_transformed = self.opcode_dense(opcode_transformed)  # [batch_size, 512, 768]
-        #print('Shape of opcode after transform', opcode_transformed.shape,'\n')
 
-        #print('Shape of Inputs_embedidng', inputs_embeddings.shape)
-        #Shape of inputs embeeing torch.Size([8, 640, 768])0700
-        inputs_embeddings = torch.cat([inputs_embeddings,bytecode_embedding,opcode_transformed],dim=1)
+        # Concatenate embeddings
+        inputs_embeddings = torch.cat([inputs_embeddings, bytecode_embedding, opcode_transformed], dim=1)
 
-        #print('Shape final', inputs_embeddings.shape)
-        #shape is [batch_size, 860,768]
+        # Expand attention mask and position indices
+        attn_mask = self.expand_tensor_with_padding(attn_mask, inputs_embeddings.size(dim=1))
+        position_idx = self.expand_tensor_with_positionidx(position_idx, inputs_embeddings.size(dim=1))
 
-        attn_mask = self.expand_tensor_with_padding(attn_mask,inputs_embeddings.size(dim=1))#1110)
-        position_idx = self.expand_tensor_with_positionidx(position_idx,inputs_embeddings.size(dim=1))#1110)
-        #print('Shape of attn_mask',attn_mask.shape)
-        #print('Shape of position', position_idx.shape)
+        if (self.model_info_show == False): # show only once 
+            self.model_info_show = True
+            print(f"Shape of inputs_embedding: {inputs_embeddings.shape}\n")
+            print(f"Shape of input_ids: {inputs_ids.shape}\n")
+            print(f"Shape of position_idx: {position_idx.shape}\n")
+            print(f"Shape of attn_mask: {attn_mask.shape}\n")
+            print(f"Shape of bytecode embedding: {bytecode_embedding.shape}\n")
+            print(f"Shape of opcode: {opcode_tensor.shape}\n")
+            # print(f"Opcode received from extract: {opcode_tensor}\n")
+            # print(f"Bytecode received from extract: {bytecode_embedding}\n")
+            # print(f"Input embedding: {inputs_embeddings}\n")
+            # print(f"Position_idx: {position_idx}\n")
+            # print(f"Attn_mask: {attn_mask}\n")
+
         # Encode with RoBERTa
-        #print('Shape of inputs_embedding after plus', inputs_embeddings.shape)
-        #print('Input_embediing', inputs_embeddings)
-        
-
         outputs = self.encoder.roberta(
             inputs_embeds=inputs_embeddings,
             attention_mask=attn_mask,
             position_ids=position_idx,
             token_type_ids=position_idx.eq(-1).long()
-            )[0]
-        
-        #print(f"outputs shape before classifier: {outputs.shape}")  # Add this
+        )[0]
 
+        # Classify and compute probabilities
         logits = self.classifier(outputs)
         prob = torch.sigmoid(logits)
-
         prediction = (prob > 0.5).int()
 
-        pred_str = " ".join(map(str, prediction.tolist()[0]))
-        
+        # Compute loss if labels are provided
         if labels is not None:
             loss_fct = nn.BCEWithLogitsLoss()
             loss = loss_fct(logits, labels.float())
             return loss, prediction
-        else:
-            return prob
+        
+        return prob
