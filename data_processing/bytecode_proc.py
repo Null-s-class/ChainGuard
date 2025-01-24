@@ -10,12 +10,6 @@ from tqdm import tqdm
 
 cpu_cont = 16
 logger = logging.getLogger(__name__)
-import os
-import pickle
-import numpy as np
-import torch
-from transformers import BertTokenizer, BertModel
-from tqdm import tqdm
 
 def preprocess_bytecode(bytecode, max_length=512, batch_size=32, path_save="Data/Dataset/embedding/bytecode/"):
     """
@@ -58,6 +52,10 @@ def preprocess_bytecode(bytecode, max_length=512, batch_size=32, path_save="Data
                 existing_embeddings = pickle.load(f)
             with open(indices_path, 'rb') as f:
                 existing_indices = pickle.load(f)
+            
+            # Ensure lists if loaded data is not already a list
+            existing_embeddings = [existing_embeddings] if not isinstance(existing_embeddings, list) else existing_embeddings
+            existing_indices = [existing_indices] if not isinstance(existing_indices, list) else existing_indices
             
             # Try to load progress
             last_processed_batch = 0
@@ -112,18 +110,11 @@ def preprocess_bytecode(bytecode, max_length=512, batch_size=32, path_save="Data
             
             # Append to existing data
             existing_embeddings.append(batch_embeddings)
-            existing_indices.append(batch_indices)
+            existing_indices.append(batch_indices.to_numpy())
             
             # Save progress after each batch
-            if isinstance(existing_embeddings, list):
-                full_embeddings = np.concatenate(existing_embeddings, axis=0)
-            else:
-                full_embeddings = existing_embeddings
-            
-            if isinstance(existing_indices, list):
-                full_indices = np.concatenate(existing_indices, axis=0)
-            else:
-                full_indices = existing_indices
+            full_embeddings = np.concatenate(existing_embeddings, axis=0)
+            full_indices = np.concatenate(existing_indices, axis=0)
             
             # Save incremental progress
             with open(embeddings_path, 'wb') as f:
@@ -140,15 +131,8 @@ def preprocess_bytecode(bytecode, max_length=512, batch_size=32, path_save="Data
             # Optionally, you might want to break or continue based on your error handling strategy
     
     # Final concatenation
-    if isinstance(existing_embeddings, list):
-        embedding = np.concatenate(existing_embeddings, axis=0)
-    else:
-        embedding = existing_embeddings
-    
-    if isinstance(existing_indices, list):
-        indices = np.concatenate(existing_indices, axis=0)
-    else:
-        indices = existing_indices
+    embedding = np.concatenate(existing_embeddings, axis=0)
+    indices = np.concatenate(existing_indices, axis=0)
     
     # Clean up progress file if completed successfully
     if os.path.exists(progress_path):
