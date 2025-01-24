@@ -36,8 +36,18 @@ DEF_EVAL_BATCH_SIZE = 16
 DEF_LEARNING_RATE = 2e-5
 DEF_MAX_GRAD_NORM = 1.0
 
-DRY_RUN_MODE = False
-DRY_RUN_DATA = 0.1 # only used 10% of the original data to test 
+DRY_RUN_MODE = True
+DRY_RUN_DATA_SAMPLES = 500 # only used 500 sample of the original data to test 
+
+DEF_DATASET_PKL_SAVE_PATH = 'Data/Dataset/'
+DEF_DATASET_TRAIN = 'train_data.pkl'
+DEF_DATASET_VALID = 'valid_data.pkl'
+DEF_DATASET_TEST = 'test_data.pkl'
+
+DEF_DATASET_DRYRUN_TRAIN = 'DR_train_data.pkl'
+DEF_DATASET_DRYRUN_VALID = 'DR_valid_data.pkl'
+DEF_DATASET_DRYRUN_TEST = 'DR_test_data.pkl'
+
 
 DEF_MODEL_VER = '1_Null'
 DEF_MODEL_CHECKPOINT_DIR= 'checkpoint-best-f1'
@@ -61,7 +71,7 @@ def train(args, model, tokenizer):
     # Data Preparation
     args.hidden_size = model.config.hidden_size
     print(f"MODEL HIDDEN: {args.hidden_size}\n")
-    train_dataset = TextDataset(tokenizer, args, args.train_data_file, DRY_RUN_MODE = DRY_RUN_MODE, DRY_RUN_DATA = DRY_RUN_DATA)
+    train_dataset = TextDataset(tokenizer, args, file_path = args.train_data_file, DRY_RUN_MODE = DRY_RUN_MODE, DRY_RUN_DATA_SAMPLES = DRY_RUN_DATA_SAMPLES)
     train_sampler = RandomSampler(train_dataset)
     train_dataloader = DataLoader(
         train_dataset, 
@@ -169,7 +179,7 @@ def save_best_model(args, model, best_f1):
 def evaluate(args, model, tokenizer, eval_when_training=False):
     """Model Evaluation Function with Detailed Metrics"""
     # Dataset and Dataloader Setup
-    eval_dataset = TextDataset(tokenizer, args, file_path=args.eval_data_file)
+    eval_dataset = TextDataset(tokenizer, args, file_path=args.eval_data_file, DRY_RUN_MODE = DRY_RUN_MODE, DRY_RUN_DATA_SAMPLES = DRY_RUN_DATA_SAMPLES)
     eval_sampler = SequentialSampler(eval_dataset)
     eval_dataloader = DataLoader(
         eval_dataset, 
@@ -224,7 +234,7 @@ def evaluate(args, model, tokenizer, eval_when_training=False):
 def test(args, model, tokenizer, eval_when_training=False):
     """Model Test Function with Detailed Metrics"""
     # Dataset and Dataloader Setup
-    test_dataset = TextDataset(tokenizer, args, file_path=args.test_data_file)
+    test_dataset = TextDataset(tokenizer, args, file_path=args.test_data_file , DRY_RUN_MODE = DRY_RUN_MODE, DRY_RUN_DATA_SAMPLES = DRY_RUN_DATA_SAMPLES)
     test_sampler = SequentialSampler(test_dataset)
     test_dataloader = DataLoader(
         test_dataset, 
@@ -342,11 +352,23 @@ def main():
     ###############################################
     #################### SETUP ####################
     ###############################################
-    # Set model ver
-    model_ver = DEF_MODEL_VER
-    # Setup logging
-    logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',datefmt='%m/%d/%Y %H:%M:%S',level=logging.INFO)
-    
+
+    # save to pkl will implement later
+    # #Set save pkl
+    # args.train_data_pkl_file = DEF_DATASET_TRAIN
+    # args.eval_data_pkl_file = DEF_DATASET_VALID
+    # args.test_data_pkl_file = DEF_DATASET_TEST
+
+    # Set DRY_RUN_MODE
+    if DRY_RUN_MODE == True:
+        # args.dry_run_train_data_pkl_file = DEF_DATASET_DRYRUN_TRAIN
+        # args.dry_run_eval_data_pkl_file = DEF_DATASET_DRYRUN_VALID
+        # args.dry_run_test_data_pkl_file = DEF_DATASET_DRYRUN_TEST
+        logger.info(f".oO0Oo.  CURRENTLY WE ARE RUNNING DRY-RUN MODE  .oO0Oo.")
+        # logger.info(f"      DATA TRAIN:  {args.dry_run_train_data_pkl_file}")
+        # logger.info(f"      DATA VALID:  {args.dry_run_eval_data_pkl_file}")
+        # logger.info(f"      DATA TEST:  {args.dry_run_test_data__pkl_file}")
+        logger.info(f" USING ONLY { DRY_RUN_DATA_SAMPLES } SAMPLES FROM ORIGINAL DATASET.")
 
     # Setup CUDA, GPU
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

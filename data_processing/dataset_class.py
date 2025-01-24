@@ -115,94 +115,73 @@ def convert_examples_to_features(item):
     return InputFeatures(source_tokens, source_ids, position_idx, dfg_to_code, dfg_to_dfg, bytecode_embedding, opcode_tensor, label, url)
 
 
-######### Class Dataset #########
+
 class TextDataset(Dataset):
-    def __init__(self, tokenizer, args, file_path = "", DRY_RUN_MODE = False, DRY_RUN_DATA = None):
+    def __init__(self, tokenizer, args, file_path="", DRY_RUN_MODE=False, DRY_RUN_SAMPLES=None):
         self.file_path = file_path
         self.examples = []
-        self.args=args
-        self.data_max_size = self.args.hidden_size #768
-        index_filename = self.args.train_data_file #chua danh sach index cua file tranning set valid set hoac test set
-        #self.bytecode_embedding = bytecode_embeddings
-        #load index
-        #logger.info("Creating features from index file at %s ", index_filename)
+        self.args = args
+        self.data_max_size = self.args.hidden_size  # 768
+        index_filename = self.args.train_data_file
+
+        # Load index files and data
         index_to_sourcecode = {}
         index_to_bytecode = {}
         index_to_opcode = {}
 
         with open('Data/Dataset/data.jsonl') as f: 
             for line in f:
-                line=line.strip()
-                js=json.loads(line)
-                index_to_sourcecode[js['idx']]=js['source'] # load sourcode theo index
-                index_to_bytecode[js['idx']] = js['byte'] # load bytecode theo index
-                index_to_opcode[js['idx']] = js['codeop'] # load opcode theo index
-            
-        #chuyen bytecode ve Dataframe   
+                line = line.strip()
+                js = json.loads(line)
+                index_to_sourcecode[js['idx']] = js['source']
+                index_to_bytecode[js['idx']] = js['byte']
+                index_to_opcode[js['idx']] = js['codeop']
+        
+        # Process bytecode and opcode
         df_bytecode = pd.DataFrame.from_dict(index_to_bytecode, orient='index', columns=['bytecode'])
         df_bytecode.index.name = 'index'
         df_bytecode.reset_index(inplace=True)
         
-        #chuyen opcode ve Dataframe
-        df_opcode =pd.DataFrame.from_dict(index_to_opcode, orient='index', columns=['opcode'])
+        df_opcode = pd.DataFrame.from_dict(index_to_opcode, orient='index', columns=['opcode'])
         df_opcode.index.name = 'index'
         df_opcode.reset_index(inplace=True)
         
-        #Process opcode
-        opcode_matrix = process_opcode(df_opcode, max_length=self.data_max_size )
-        #print('Processed opcode: ',opcode_matrix,'\n')
-    
-        #logger.info('loaded Data')
-        #logger.info('df_bytecode :n%s', df_bytecode)
+        # Process opcode
+        opcode_matrix = process_opcode(df_opcode, max_length=self.data_max_size)
+        
+        # Preprocess bytecode
+        bytecode_embedding, bytecode_index = preprocess_bytecode(df_bytecode, max_length=512)
+        embedding_dict = {index: embedding for index, embedding in zip(bytecode_index, bytecode_embedding)}
 
-        bytecode_embedding, bytecode_index = preprocess_bytecode(df_bytecode,max_length= 512 ) #limit due to pretrain model #self.data_max_size) #embedding bytecode
-        #print('Processed bytecode')
-        #logger.info('byte code embedding%s', bytecode_embedding.shape,'\n')
-        #logger.info('bytecode index%s',bytecode_index,'\n')
-        embedding_dict = {index : embedding for index, embedding in zip(bytecode_index, bytecode_embedding)}
-
-        #logger.info('Bytecode embeding%s', embedding_dict)
-        #load code function according to index
+        # Load code function according to index
         data_source = []
-        cache={}
-        f = open(index_filename)
+        cache = {}
         with open(index_filename) as f:
             for line in f:
-                line=line.strip()
-                url1,labels =line.split(' ', 1) # la indx cua tung function
-                labels = [int(label) for label in labels.split()] # convert labels thanh mang [1,0,1,0]
+                line = line.strip()
+                url1, labels = line.split(' ', 1)
+                labels = [int(label) for label in labels.split()]
+                
+                # Skip if any required data is missing
                 if url1 not in index_to_sourcecode or url1 not in index_to_bytecode or url1 not in index_to_opcode:
                     continue
+                
                 embedding_code = embedding_dict[url1]
                 opcode_tensor = opcode_matrix[url1]
-                if embedding_code is None:
-                    logger.info('Key invalid')
-                data_source.append((url1,labels,tokenizer, args, cache ,index_to_sourcecode,embedding_code, opcode_tensor))
                 
-        # only use 10% valid data_source to keep best model        
+                data_source.append((url1, labels, tokenizer, args, cache, 
+                                    index_to_sourcecode, embedding_code, opcode_tensor))
+        
+        # Implement TEST mode to limit samples
+        if DRY_RUN_MODE and DRY_RUN_SAMPLES is not None:
+            data_source = random.sample(data_source, min(DRY_RUN_SAMPLES, len(data_source)))
+        
+        # Only use 10% of validation data
         if 'valid' in self.file_path:
-            data_source=random.sample(data_source,int(len(data_source)*0.1))
-            
-        #convert example to input features    
-        self.examples=[convert_examples_to_features(x) for x in tqdm(data_source,total=len(data_source))]
-        #self.examples la 1 mang Inputfeature cho tung sample
-        #[<__main__.InputFeatures object at 0x73b9ea3a5810>, <__main__.InputFeatures object at 0x73b9ee9bd490>,....]
-
-        #logger.info('seld examples %s', self.examples)
-
-
-        # if 'train' in self.file_path:
-        #     for idx, example in enumerate(self.examples[:3]): #moi line example chua cac thuoc tinh source_tokens_1,source_ids_1,position_idx_1
-        #         logger.info("*** Example ***")
-        #         logger.info("idx: {}".format(idx))
-        #         logger.info("label: {}".format(example.label))
-        #         logger.info("input_tokens_1: {}".format([x.replace('\u0120','_') for x in example.input_tokens]))
-        #         logger.info("input_ids_1: {}".format(' '.join(map(str, example.input_ids))))       
-        #         logger.info("position_idx_1: {}".format(example.position_idx))
-        #         logger.info("dfg_to_code_1: {}".format(' '.join(map(str, example.dfg_to_code))))
-        #         logger.info("dfg_to_dfg_1: {}".format(' '.join(map(str, example.dfg_to_dfg))))
-                
-                
+            data_source = random.sample(data_source, int(len(data_source)*0.1))
+        
+        # Convert examples to features
+        self.examples = [convert_examples_to_features(x) for x in tqdm(data_source, total=len(data_source))]
 
     def __len__(self):
         return len(self.examples)
@@ -250,15 +229,63 @@ class TextDataset(Dataset):
                 out_opcode_tensor,         
                 torch.tensor(self.examples[item].label))
 
-def saved_extract_dataset(dataset, filepath):
+def save_dataset(dataset, filepath):
+    """
+    Save dataset to a pickle file using pickle
+    
+    Args:
+        dataset (TextDataset): Dataset to save
+        filepath (str): Path to save the pickle file
+    """
     with open(filepath, 'wb') as f:
-        pickle.dump(dataset,f)
+        pickle.dump(dataset, f)
 
-def load_extract_dataset(filepath):
+def load_dataset(filepath):
+    """
+    Load dataset from a pickle file
+    
+    Args:
+        filepath (str): Path to the pickle file
+    
+    Returns:
+        TextDataset: Loaded dataset
+    """
     with open(filepath, 'rb') as f:
         return pickle.load(f)
 
-def load_dataset_from_pickle(file_path):
-    dataset = joblib.load(file_path)
-    return dataset
+def load_dataset_joblib(filepath):
+    """
+    Load dataset using joblib (alternative method)
+    
+    Args:
+        filepath (str): Path to the joblib file
+    
+    Returns:
+        TextDataset: Loaded dataset
+    """
+    return joblib.load(filepath)
 
+# # Example usage
+# def main():
+#     # Assuming you have the necessary arguments and tokenizer
+#     args = YourArgsClass()  # Replace with your actual args class
+#     tokenizer = YourTokenizer()  # Replace with your actual tokenizer
+    
+#     # Create dataset with full data
+#     full_dataset = TextDataset(tokenizer, args, file_path='train')
+    
+#     # Create dataset in TEST mode with limited samples
+#     test_dataset = TextDataset(tokenizer, args, file_path='train', 
+#                                DRY_RUN_MODE=True, DRY_RUN_SAMPLES=100)
+    
+#     # Save full dataset
+#     save_dataset(full_dataset, 'full_dataset.pkl')
+    
+#     # Save test dataset
+#     save_dataset(test_dataset, 'test_dataset.pkl')
+    
+#     # Load dataset
+#     loaded_dataset = load_dataset('full_dataset.pkl')
+
+# if __name__ == '__main__':
+#     main()
