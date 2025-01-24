@@ -382,11 +382,11 @@ def main():
     ###############################################
     #################### RUN  #####################
     ###############################################
-    logger.info("#####################\n")
-    logger.info("Training/evaluation parameters:\n\n")
+    logger.info("#####################")
+    logger.info("Training/evaluation parameters:")
     for key, value in vars(args).items():
         logger.info(f"  {key}: {value}")
-    logger.info("\n#####################")
+    logger.info("#####################")
 
     # Training
     if args.do_train:
