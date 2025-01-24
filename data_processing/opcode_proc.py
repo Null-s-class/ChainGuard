@@ -21,9 +21,8 @@ def process_opcode(opcode, max_length= 512):
 
     length = opcode['opcode'].str.split().apply(len)
     avg_length = int(length.mean())
-    maxlength = avg_length
 
-    logger.info(f'Average of length {maxlength} now reduced to {max_length}')
+    logger.info(f'Average of length {avg_length} --> {max_length}')
 
     tokenizer = Tokenizer(num_words = Vocab_of_size)
     tokenizer.fit_on_texts(opcode['opcode']) #xay dung tu dien 

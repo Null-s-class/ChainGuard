@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
+import os
 import logging
 import numpy as np
 import torch
@@ -9,7 +10,11 @@ from tqdm import tqdm
 cpu_cont = 16
 logger = logging.getLogger(__name__)
 
-def preprocess_bytecode(bytecode, max_length = 512, batch_size = 32):
+
+def preprocess_bytecode(bytecode, max_length = 512, batch_size = 32, path_save = "Data/Dataset/embedding/bytecode/"):
+    SAVE_DIR = path_save
+    os.makedirs(SAVE_DIR, exist_ok=True)
+    
     tokenizer = BertTokenizer.from_pretrained('bert-base-cased')
     modelBert = BertModel.from_pretrained('bert-base-cased')
     embedding = [] # danh sach embedding
