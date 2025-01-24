@@ -11,3 +11,4 @@ __pycache__/*
 GCB.7z
 *.pyo
 *.pyc
+*.pkl
