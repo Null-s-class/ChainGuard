@@ -117,7 +117,7 @@ def convert_examples_to_features(item):
 
 
 class TextDataset(Dataset):
-    def __init__(self, tokenizer, args, file_path="", DRY_RUN_MODE=False, DRY_RUN_SAMPLES=None):
+    def __init__(self, tokenizer, args, file_path="", DRY_RUN_MODE=False, DRY_RUN_DATA_SAMPLES=None):
         self.file_path = file_path
         self.examples = []
         self.args = args
@@ -173,8 +173,8 @@ class TextDataset(Dataset):
                                     index_to_sourcecode, embedding_code, opcode_tensor))
         
         # Implement TEST mode to limit samples
-        if DRY_RUN_MODE and DRY_RUN_SAMPLES is not None:
-            data_source = random.sample(data_source, min(DRY_RUN_SAMPLES, len(data_source)))
+        if DRY_RUN_MODE and DRY_RUN_DATA_SAMPLES is not None:
+            data_source = random.sample(data_source, min(DRY_RUN_DATA_SAMPLES, len(data_source)))
         
         # Only use 10% of validation data
         if 'valid' in self.file_path:
