@@ -47,11 +47,11 @@ def process_opcode(opcode, max_length=512, batch_size=32, path_save="Data/Datase
     Returns:
         dict: Mapping of indices to opcode tensors
     """
-    # SAVE_DIR = path_save
-    # os.makedirs(SAVE_DIR, exist_ok=True)
+    SAVE_DIR = path_save
+    os.makedirs(SAVE_DIR, exist_ok=True)
     
-    # processed_dict_path = os.path.join(SAVE_DIR, 'opcodes_processed.pkl')
-    # progress_path = os.path.join(SAVE_DIR, 'opcodes_progress.pkl')
+    processed_dict_path = os.path.join(SAVE_DIR, 'opcodes_processed.pkl')
+    progress_path = os.path.join(SAVE_DIR, 'opcodes_progress.pkl')
 
     # logger.info('Attempting to load existing data from last run...')
 
@@ -122,11 +122,11 @@ def process_opcode(opcode, max_length=512, batch_size=32, path_save="Data/Datase
             batch_result = {batch_indices[i]: opcode_tensor[i] for i in range(len(batch_indices))}
             result_dict.update(batch_result)
             
-            # # Save progress
-            # with open(processed_dict_path, 'wb') as f:
-            #     pickle.dump(result_dict, f)
-            # with open(progress_path, 'wb') as f:
-            #     pickle.dump(batch_idx + 1, f)
+            # Save progress
+            with open(processed_dict_path, 'wb') as f:
+                pickle.dump(result_dict, f)
+            with open(progress_path, 'wb') as f:
+                pickle.dump(batch_idx + 1, f)
             
             logger.info(f"Processed batch {batch_idx + 1}/{num_batches}. Total processed: {len(result_dict)}")
         
@@ -137,8 +137,8 @@ def process_opcode(opcode, max_length=512, batch_size=32, path_save="Data/Datase
             #     pickle.dump(result_dict, f)
     
     # # Clean up progress file if all batches completed successfully
-    # if os.path.exists(progress_path):
-    #     os.remove(progress_path)
+    if os.path.exists(progress_path):
+        os.remove(progress_path)
     
     logger.info(f"Opcode processing complete. Total processed entries: {len(result_dict)}")
     return result_dict
