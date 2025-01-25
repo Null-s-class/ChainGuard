@@ -22,15 +22,10 @@ from data_processing.bytecode_proc import preprocess_bytecode
 from data_processing.opcode_proc import process_opcode
 from data_processing.source_code_proc import extract_dataflow
 
-from parser import DFG_python,DFG_java,DFG_ruby,DFG_go,DFG_php,DFG_javascript
+from parser import DFG_javascript
 from tree_sitter import Language, Parser
 
 dfg_function={
-    'python':DFG_python,
-    'java':DFG_java,
-    'ruby':DFG_ruby,
-    'go':DFG_go,
-    'php':DFG_php,
     'javascript':DFG_javascript
 }
 
@@ -129,6 +124,7 @@ class TextDataset(Dataset):
         index_to_bytecode = {}
         index_to_opcode = {}
 
+        logger.info("Loading dataset from jsonl")
         with open('Data/Dataset/data.jsonl') as f: 
             for line in f:
                 line = line.strip()
@@ -147,9 +143,11 @@ class TextDataset(Dataset):
         df_opcode.reset_index(inplace=True)
         
         # Process opcode
+        logger.info('Processing opcode')
         opcode_matrix = process_opcode(df_opcode, max_length=self.data_max_size)
         
         # Preprocess bytecode
+        logger.info('Processing bytecode')
         bytecode_embedding, bytecode_index = preprocess_bytecode(df_bytecode, max_length=512)
         embedding_dict = {index: embedding for index, embedding in zip(bytecode_index, bytecode_embedding)}
 

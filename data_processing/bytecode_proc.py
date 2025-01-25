@@ -36,43 +36,48 @@ def preprocess_bytecode(bytecode, max_length=512, batch_size=32, path_save="Data
         tuple: (embeddings, indices) - Numpy arrays of processed data
     """
 
-    SAVE_DIR = path_save
-    os.makedirs(SAVE_DIR, exist_ok=True)
+    # SAVE_DIR = path_save
+    # os.makedirs(SAVE_DIR, exist_ok=True)
     
-    # Paths for saving progress
-    embeddings_path = os.path.join(SAVE_DIR, 'bytecode_embeddings.pkl')
-    indices_path = os.path.join(SAVE_DIR, 'bytecode_indices.pkl')
-    progress_path = os.path.join(SAVE_DIR, 'bytecode_progress.pkl')
+    # # Paths for saving progress
+    # embeddings_path = os.path.join(SAVE_DIR, 'bytecode_embeddings.pkl')
+    # indices_path = os.path.join(SAVE_DIR, 'bytecode_indices.pkl')
+    # progress_path = os.path.join(SAVE_DIR, 'bytecode_progress.pkl')
     
-    # Initialize or load existing data
-    try:
-        # Try to load existing embeddings and progress
-        if os.path.exists(embeddings_path) and os.path.getsize(embeddings_path) > 0:
-            with open(embeddings_path, 'rb') as f:
-                existing_embeddings = pickle.load(f)
-            with open(indices_path, 'rb') as f:
-                existing_indices = pickle.load(f)
+    existing_embeddings = []
+    existing_indices = []
+    last_processed_batch = 0
+
+    #logger.info(f'Attempting to load existing data from last run...')
+    # # Initialize or load existing data
+    # try:
+    #     # Try to load existing embeddings and progress
+    #     if os.path.exists(embeddings_path) and os.path.getsize(embeddings_path) > 0:
+    #         with open(embeddings_path, 'rb') as f:
+    #             existing_embeddings = pickle.load(f)
+    #         with open(indices_path, 'rb') as f:
+    #             existing_indices = pickle.load(f)
             
-            # Ensure lists if loaded data is not already a list
-            existing_embeddings = [existing_embeddings] if not isinstance(existing_embeddings, list) else existing_embeddings
-            existing_indices = [existing_indices] if not isinstance(existing_indices, list) else existing_indices
+    #         # Ensure lists if loaded data is not already a list
+    #         existing_embeddings = [existing_embeddings] if not isinstance(existing_embeddings, list) else existing_embeddings
+    #         existing_indices = [existing_indices] if not isinstance(existing_indices, list) else existing_indices
             
-            # Try to load progress
-            last_processed_batch = 0
-            if os.path.exists(progress_path):
-                with open(progress_path, 'rb') as f:
-                    last_processed_batch = pickle.load(f)
+    #         # Try to load progress
+    #         last_processed_batch = 0
+    #         if os.path.exists(progress_path):
+    #             with open(progress_path, 'rb') as f:
+    #                 last_processed_batch = pickle.load(f)
             
-            logger.info(f"Resuming from batch {last_processed_batch}")
-        else:
-            existing_embeddings = []
-            existing_indices = []
-            last_processed_batch = 0
-    except Exception as e:
-        logger.error(f"Error loading existing data: {e}")
-        existing_embeddings = []
-        existing_indices = []
-        last_processed_batch = 0
+    #         logger.info(f"Resuming from batch {last_processed_batch}")
+    #     else:
+    #         existing_embeddings = []
+    #         existing_indices = []
+    #         last_processed_batch = 0
+    # except Exception as e:
+    #     logger.error(f"Error loading existing data: {e} continue from begining....")
+    #     existing_embeddings = []
+    #     existing_indices = []
+    #     last_processed_batch = 0
     
     # Prepare processing
     tokenizer = BertTokenizer.from_pretrained('bert-base-cased')
@@ -80,10 +85,11 @@ def preprocess_bytecode(bytecode, max_length=512, batch_size=32, path_save="Data
     
     num_sample = len(bytecode)
     num_batches = (num_sample + batch_size - 1) // batch_size
-    logger.info(f'Total number of batches: {num_batches}')
+
+    logger.info(f'Total number of batches: {num_batches} processed {last_processed_batch}, batches left: {num_batches - last_processed_batch} ')
     
     # Process remaining batches
-    for batch_idx in tqdm(range(last_processed_batch, num_batches)):
+    for batch_idx in tqdm(range(last_processed_batch, num_batches), desc="Processing bytecode: " ):
         try:
             start_idx = batch_idx * batch_size
             end_idx = min((batch_idx + 1) * batch_size, num_sample)
@@ -116,27 +122,28 @@ def preprocess_bytecode(bytecode, max_length=512, batch_size=32, path_save="Data
             full_embeddings = np.concatenate(existing_embeddings, axis=0)
             full_indices = np.concatenate(existing_indices, axis=0)
             
-            # Save incremental progress
-            with open(embeddings_path, 'wb') as f:
-                pickle.dump(full_embeddings, f)
-            with open(indices_path, 'wb') as f:
-                pickle.dump(full_indices, f)
-            with open(progress_path, 'wb') as f:
-                pickle.dump(batch_idx + 1, f)
+            # # Save incremental progress
+            # with open(embeddings_path, 'wb') as f:
+            #     pickle.dump(full_embeddings, f)
+            # with open(indices_path, 'wb') as f:
+            #     pickle.dump(full_indices, f)
+            # with open(progress_path, 'wb') as f:
+            #     pickle.dump(batch_idx + 1, f)
             
             logger.info(f"Progress saved for batch {batch_idx}")
         
         except Exception as e:
             logger.error(f"Error processing batch {batch_idx}: {e}")
+            continue
             # Optionally, you might want to break or continue based on your error handling strategy
     
     # Final concatenation
     embedding = np.concatenate(existing_embeddings, axis=0)
     indices = np.concatenate(existing_indices, axis=0)
     
-    # Clean up progress file if completed successfully
-    if os.path.exists(progress_path):
-        os.remove(progress_path)
+    # # Clean up progress file if completed successfully
+    # if os.path.exists(progress_path):
+    #     os.remove(progress_path)
     
     logger.info(f"Preprocessing complete. Total embeddings: {len(embedding)}")
     return embedding, indices
