@@ -70,7 +70,8 @@ def train(args, model, tokenizer):
     """
     # Data Preparation
     args.hidden_size = model.config.hidden_size
-    print(f"MODEL HIDDEN: {args.hidden_size}\n")
+    logger.info(f"MODEL HIDDEN: {args.hidden_size}\n")
+    logger.info(f"Dataset preparing...")
     train_dataset = TextDataset(tokenizer, args, file_path = args.train_data_file, DRY_RUN_MODE = DRY_RUN_MODE, DRY_RUN_DATA_SAMPLES = DRY_RUN_DATA_SAMPLES)
     train_sampler = RandomSampler(train_dataset)
     train_dataloader = DataLoader(
@@ -386,8 +387,10 @@ def main():
 
     # Set RobertaConfig
     config = RobertaConfig.from_pretrained(args.config_name if args.config_name else args.model_name_or_path)
-    print(f'\n\n CONFIG \n ############################ \n {config} \n\n############################\n')
-
+    logger.info("################################")
+    logger.info("RobertaConfig:")
+    logger.info(f"{config}")
+    logger.info("################################")
     
     
     # Set model and tokenizer
@@ -412,6 +415,7 @@ def main():
 
     # Training
     if args.do_train:
+        logger.info("START TRAINING")
         model.to(args.device)
         train(args, model, tokenizer)
 
@@ -419,6 +423,7 @@ def main():
     results = {}
 
     if args.do_eval:
+        logger.info("START EVAL")
         checkpoint_prefix = f'checkpoint-best-f1/model_{model_ver}.bin'
         output_dir = os.path.join(args.output_dir, '{}'.format(checkpoint_prefix))  
         model.load_state_dict(torch.load(output_dir, weights_only = True))
@@ -426,6 +431,7 @@ def main():
         result = evaluate(args, model, tokenizer)
         
     if args.do_test:
+        logger.info("START TEST")
         checkpoint_prefix = f'checkpoint-best-f1/model_{model_ver}.bin'
         output_dir = os.path.join(args.output_dir, '{}'.format(checkpoint_prefix))  
         model.load_state_dict(torch.load(output_dir, weights_only = True))

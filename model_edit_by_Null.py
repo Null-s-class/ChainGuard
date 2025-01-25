@@ -95,17 +95,17 @@ class Model(nn.Module):
 
         if (self.model_info_show == False): # show only once 
             self.model_info_show = True
-            print(f"Shape of inputs_embedding: {inputs_embeddings.shape}\n")
-            print(f"Shape of input_ids: {inputs_ids.shape}\n")
-            print(f"Shape of position_idx: {position_idx.shape}\n")
-            print(f"Shape of attn_mask: {attn_mask.shape}\n")
-            print(f"Shape of bytecode embedding: {bytecode_embedding.shape}\n")
-            print(f"Shape of opcode: {opcode_tensor.shape}\n")
-            # print(f"Opcode received from extract: {opcode_tensor}\n")
-            # print(f"Bytecode received from extract: {bytecode_embedding}\n")
-            # print(f"Input embedding: {inputs_embeddings}\n")
-            # print(f"Position_idx: {position_idx}\n")
-            # print(f"Attn_mask: {attn_mask}\n")
+            logger.info(f"Shape of inputs_embedding: {inputs_embeddings.shape}\n")
+            logger.info(f"Shape of input_ids: {inputs_ids.shape}\n")
+            logger.info(f"Shape of position_idx: {position_idx.shape}\n")
+            logger.info(f"Shape of attn_mask: {attn_mask.shape}\n")
+            logger.info(f"Shape of bytecode embedding: {bytecode_embedding.shape}\n")
+            logger.info(f"Shape of opcode: {opcode_tensor.shape}\n")
+            # logger.info(f"Opcode received from extract: {opcode_tensor}\n")
+            # logger.info(f"Bytecode received from extract: {bytecode_embedding}\n")
+            # logger.info(f"Input embedding: {inputs_embeddings}\n")
+            # logger.info(f"Position_idx: {position_idx}\n")
+            # logger.info(f"Attn_mask: {attn_mask}\n")
 
         # Encode with RoBERTa
         outputs = self.encoder.roberta(

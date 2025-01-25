@@ -14,29 +14,7 @@ import joblib
 import torch
 import pandas as pd
 from transformers import RobertaTokenizer
-from parser import DFG_python, DFG_java, DFG_ruby, DFG_go, DFG_php, DFG_javascript
-from parser import tree_to_token_index, index_to_code_token
-from tree_sitter import Language, Parser
 
-dfg_function={
-    'python':DFG_python,
-    'java':DFG_java,
-    'ruby':DFG_ruby,
-    'go':DFG_go,
-    'php':DFG_php,
-    'javascript':DFG_javascript
-}
-
-#load parsers
-#Create a dictionary for progamming language suit with data source code chua cac bo phan tich 
-parsers={}        
-for lang in dfg_function:
-    LANGUAGE = Language('parser/my-languages.so', lang)
-    parser = Parser()
-    parser.set_language(LANGUAGE) 
-    parser = [parser,dfg_function[lang]]    
-    parsers[lang]= parser
-    
     
 #remove comments, tokenize code and extract dataflow           
 # code la function 
