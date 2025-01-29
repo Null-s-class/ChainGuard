@@ -33,7 +33,7 @@ def clean_opcode(opcode_str):
     
     return opcode_str
 
-def process_opcode(opcode, max_length=512, batch_size=32, path_save="Data/Dataset/processed_opcodes/"):
+def process_opcode(opcode, load_only = False, max_length=512, batch_size=32, path_save="Data/Dataset/processed_opcodes/"):
     """
     Batch-processing version of process_opcode for large datasets
     Supports resumable processing and incremental saving
@@ -47,25 +47,31 @@ def process_opcode(opcode, max_length=512, batch_size=32, path_save="Data/Datase
     Returns:
         dict: Mapping of indices to opcode tensors
     """
+    ver = "2"
     SAVE_DIR = path_save
     os.makedirs(SAVE_DIR, exist_ok=True)
     
-    processed_dict_path = os.path.join(SAVE_DIR, 'opcodes_processed.pkl')
-    progress_path = os.path.join(SAVE_DIR, 'opcodes_progress.pkl')
+    processed_dict_path = os.path.join(SAVE_DIR, f'opcodes_processed_{ver}.pkl')
+    progress_path = os.path.join(SAVE_DIR, f'opcodes_progress_{ver}.pkl')
 
-    # logger.info('Attempting to load existing data from last run...')
+    
 
     existing_result_dict = {}
-    # # Try to load existing processed data
-    # try:
-    #     if os.path.exists(processed_dict_path) and os.path.getsize(processed_dict_path) > 0:
-    #         with open(processed_dict_path, 'rb') as f:
-    #             existing_result_dict = pickle.load(f)
-    #         logger.info(f"Loaded existing processed opcodes: {len(existing_result_dict)} entries")
-    # except Exception as e:
-    #     logger.warning(f"Error loading existing processed opcodes: {e} continue from begining....")
-    #     existing_result_dict = {}
-    
+    if load_only == True:
+        logger.info('Attempting to load existing data from last run...')
+        # Try to load existing processed data
+        try:
+            processed_dict_path_saved = os.path.join(SAVE_DIR, f'opcodes_processed.pkl')
+            if os.path.exists(processed_dict_path_saved) and os.path.getsize(processed_dict_path_saved) > 0:
+                with open(processed_dict_path_saved, 'rb') as f:
+                    existing_result_dict = pickle.load(f)
+                logger.info(f"Loaded existing processed opcodes: {len(existing_result_dict)} entries")
+                return existing_result_dict
+        except Exception as e:
+            logger.warning(f"Error loading existing processed opcodes: {e} continue from begining....")
+            existing_result_dict = {}
+        
+        
     # Prepare result dictionary
     result_dict = existing_result_dict.copy()
     last_processed_batch = 0

@@ -122,13 +122,13 @@ def preprocess_bytecode(bytecode, max_length=512, batch_size=32, path_save="Data
             full_embeddings = np.concatenate(existing_embeddings, axis=0)
             full_indices = np.concatenate(existing_indices, axis=0)
             
-            # Save incremental progress
-            with open(embeddings_path, 'wb') as f:
-                pickle.dump(full_embeddings, f)
-            with open(indices_path, 'wb') as f:
-                pickle.dump(full_indices, f)
-            with open(progress_path, 'wb') as f:
-                pickle.dump(batch_idx + 1, f)
+            # # Save incremental progress
+            # with open(embeddings_path, 'wb') as f:
+            #     pickle.dump(full_embeddings, f)
+            # with open(indices_path, 'wb') as f:
+            #     pickle.dump(full_indices, f)
+            # with open(progress_path, 'wb') as f:
+            #     pickle.dump(batch_idx + 1, f)
             
             logger.info(f"Progress saved for batch {batch_idx}")
         
@@ -141,9 +141,18 @@ def preprocess_bytecode(bytecode, max_length=512, batch_size=32, path_save="Data
     embedding = np.concatenate(existing_embeddings, axis=0)
     indices = np.concatenate(existing_indices, axis=0)
     
+     # Save incremental progress
+    with open(embeddings_path, 'wb') as f:
+        pickle.dump(embedding, f)
+    with open(indices_path, 'wb') as f:
+        pickle.dump(indices, f)
+    # with open(progress_path, 'wb') as f:
+    #     pickle.dump(batch_idx + 1, f)
+            
+
     # # Clean up progress file if completed successfully
-    if os.path.exists(progress_path):
-        os.remove(progress_path)
+    # if os.path.exists(progress_path):
+    #     os.remove(progress_path)
     
     logger.info(f"Preprocessing complete. Total embeddings: {len(embedding)}")
     return embedding, indices

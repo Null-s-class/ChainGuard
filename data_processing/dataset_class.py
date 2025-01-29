@@ -144,7 +144,7 @@ class TextDataset(Dataset):
         
         # Process opcode
         logger.info('Processing opcode')
-        opcode_matrix = process_opcode(df_opcode, max_length=self.data_max_size)
+        opcode_matrix = process_opcode(df_opcode,load_only=True, max_length=self.data_max_size)
         
         # Preprocess bytecode
         logger.info('Processing bytecode')

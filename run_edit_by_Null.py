@@ -353,7 +353,7 @@ def main():
     ###############################################
     #################### SETUP ####################
     ###############################################
-
+    model_ver = DEF_MODEL_VER
     # save to pkl will implement later
     # #Set save pkl
     # args.train_data_pkl_file = DEF_DATASET_TRAIN
