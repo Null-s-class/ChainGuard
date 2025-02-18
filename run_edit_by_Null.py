@@ -54,7 +54,7 @@ DEF_MODEL_CHECKPOINT_DIR= 'checkpoint-best-f1'
 os.makedirs(DEF_MODEL_CHECKPOINT_DIR, exist_ok=True)
 
 
-
+logging.basicConfig(level=logging.NOTSET)
 logger = logging.getLogger(__name__)
 
 def set_seed(seed, n_gpu):

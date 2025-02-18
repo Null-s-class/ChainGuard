@@ -9,6 +9,7 @@ from transformers import BertModel, BertTokenizer
 from tqdm import tqdm
 
 cpu_cont = 16
+logging.basicConfig(level=logging.NOTSET)
 logger = logging.getLogger(__name__)
 
 def preprocess_bytecode(bytecode, load_only = False, max_length=512, batch_size=32, path_save="Data/Dataset/embedding/bytecode/"):
