@@ -114,12 +114,15 @@ def train(args, model, tokenizer):
         model = model.to(args.device)
 
     # Logging Training Details
-    logger.info(f"***** Running Training *****")
-    logger.info(f"  Total Examples: {len(train_dataset)}")
-    logger.info(f"  Total Epochs: {args.epochs}")
-    logger.info(f"  Batch Size per GPU: {args.train_batch_size // max(args.n_gpu, 1)}")
-    logger.info(f"  Total Optimization Steps: {args.max_steps}")
-    
+     # Train!
+    logger.info("***** Running training *****")
+    logger.info("  Num examples = %d", len(train_dataset))
+    logger.info("  Num Epochs = %d", args.epochs)
+    logger.info("  Instantaneous batch size per GPU = %d", args.train_batch_size//max(args.n_gpu, 1))
+    logger.info("  Total train batch size = %d",args.train_batch_size*args.gradient_accumulation_steps)
+    logger.info("  Gradient Accumulation steps = %d", args.gradient_accumulation_steps)
+    logger.info("  Total optimization steps = %d", args.max_steps)
+
     # Training Loop with Optimization
     global_step, best_f1 = 0, 0
     for epoch in range(args.epochs):

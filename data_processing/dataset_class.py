@@ -148,7 +148,7 @@ class TextDataset(Dataset):
         
         # Preprocess bytecode
         logger.info('Processing bytecode')
-        bytecode_embedding, bytecode_index = preprocess_bytecode(df_bytecode, max_length=512)
+        bytecode_embedding, bytecode_index = preprocess_bytecode(df_bytecode, load_only= False, max_length=32)
         embedding_dict = {index: embedding for index, embedding in zip(bytecode_index, bytecode_embedding)}
 
         # Load code function according to index
