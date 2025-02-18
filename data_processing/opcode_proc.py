@@ -12,6 +12,7 @@ from tqdm import tqdm
 
 
 cpu_cont = 16
+logging.basicConfig(level=logging.NOTSET)
 logger = logging.getLogger(__name__)
 
 def clean_opcode(opcode_str):

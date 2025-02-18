@@ -4,6 +4,7 @@ import torch
 import torch.nn.functional as F
 import logging
 
+logging.basicConfig(level=logging.NOTSET)
 logger = logging.getLogger(__name__)
 
 

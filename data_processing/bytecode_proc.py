@@ -9,6 +9,7 @@ from transformers import BertModel, BertTokenizer
 from tqdm import tqdm
 
 cpu_cont = 16
+logging.basicConfig(level=logging.NOTSET)
 logger = logging.getLogger(__name__)
 
 def preprocess_bytecode(bytecode, load_only = False, max_length=512, batch_size=32, path_save="Data/Dataset/embedding/bytecode/"):
@@ -22,14 +23,14 @@ def preprocess_bytecode(bytecode, load_only = False, max_length=512, batch_size=
         logger.info("load_only=True : Loading preprocessed embeddings and indices...")
         save_embedding_path = os.path.join( path_save , f"embedding_bytecode_2.pkl") # the ver should be change manually to prevent unwanted overwrite
         save_indices_path = os.path.join( path_save , f"indices_bytecode_2.pkl")
-        if os.path.exists(save_embeddings_path) and os.path.exists(save_indices_path):
-            with open(save_embeddings_path, 'rb') as f:
+        if os.path.exists(save_embedding_path) and os.path.exists(save_indices_path):
+            with open(save_embedding_path, 'rb') as f:
                 embedding = pickle.load(f)
             with open(save_indices_path, 'rb') as f:
                 indices = pickle.load(f)
             return embedding, indices
         else:
-            logger.error(f'Preprocessed embeddings not found at {save_embeddings_path} or {save_indices_path}')
+            logger.error(f'Preprocessed embeddings not found at {save_embedding_path} or {save_indices_path}')
             embedding = [] # danh sach embedding
             indices = [] # danh sach index tuong ung
     else:
