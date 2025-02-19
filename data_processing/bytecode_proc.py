@@ -11,70 +11,106 @@ from tqdm import tqdm
 cpu_cont = 16
 logging.basicConfig(level=logging.NOTSET)
 logger = logging.getLogger(__name__)
+def bytecode_to_opcodes(bytecode):
+    return bytecode.split()
 
-def preprocess_bytecode(bytecode, load_only = False, max_length=512, batch_size=32, path_save="Data/Dataset/embedding/bytecode/"):
-    ver = '2'
-    embeddings_path = path_save + f"embedding_bytecode_{ver}.pkl"
-    indices_path = path_save + f"indices_bytecode_{ver}.pkl"
-    embedding = [] # danh sach embedding
-    indices = [] # danh sach index tuong ung
+def preprocess_bytecode(bytecode_df, load_only=False, max_length=512, batch_size=32, max_opcodes=1000):
+    embeddings_path = os.path.join(SAVE_PATH, f"embedding_bytecode_{VERSION}.pkl")
+    indices_path = os.path.join(SAVE_PATH, f"indices_bytecode_{VERSION}.pkl")
+    freq_path = os.path.join(SAVE_PATH, f"freq_bytecode_{VERSION}.pkl")
+    vocab_path = os.path.join(SAVE_PATH, f"vocab_bytecode_{VERSION}.pkl")
 
-    if load_only == True:
-        logger.info("load_only=True : Loading preprocessed embeddings and indices...")
-        save_embedding_path = os.path.join( path_save , f"embedding_bytecode_2.pkl") # the ver should be change manually to prevent unwanted overwrite
-        save_indices_path = os.path.join( path_save , f"indices_bytecode_2.pkl")
-        if os.path.exists(save_embedding_path) and os.path.exists(save_indices_path):
-            with open(save_embedding_path, 'rb') as f:
+    if load_only:
+        logger.info("Loading preprocessed data...")
+        try:
+            with open(embeddings_path, 'rb') as f:
                 embedding = pickle.load(f)
-            with open(save_indices_path, 'rb') as f:
+            with open(indices_path, 'rb') as f:
                 indices = pickle.load(f)
+            # with open(freq_path, 'rb') as f:
+            #     freq_vector = pickle.load(f)
+            # with open(vocab_path, 'rb') as f:
+            #     opcode_vocab = pickle.load(f)
+
             return embedding, indices
-        else:
-            logger.error(f'Preprocessed embeddings not found at {save_embedding_path} or {save_indices_path}')
-            embedding = [] # danh sach embedding
-            indices = [] # danh sach index tuong ung
-    else:
-        logger.info("load_only=False : Processing bytecodes...")
+        except FileNotFoundError:
+            logger.error(f'Preprocessed data not found in {SAVE_PATH}')
+            return [], [], [], []
 
+    logger.info("Processing bytecodes...")
 
-    
     tokenizer = BertTokenizer.from_pretrained('bert-base-cased')
-    modelBert = BertModel.from_pretrained('bert-base-cased')
-  
-    num_sample = len(bytecode)
-    num_batches = (num_sample + batch_size -1) // batch_size
+    model = BertModel.from_pretrained('bert-base-cased')
 
-    logger.info(f'Number of batch {num_batches}, max_len = {max_length}')
+    # BERT embeddings
+    num_samples = len(bytecode_df)
+    num_batches = (num_samples + batch_size - 1) // batch_size
+    logger.info(f'Number of batches for BERT processing: {num_batches}')
 
-    for batch_idx in tqdm(range(num_batches), f"Processing bytecodes"):
+    embedding = []
+    indices = []
+
+    for batch_idx in tqdm(range(num_batches), desc="Processing bytecodes with BERT"):
         start_idx = batch_idx * batch_size
-        end_idx = min((batch_idx + 1) * batch_size, num_sample)
+        end_idx = min((batch_idx + 1) * batch_size, num_samples)
 
-        batch_bytecodes = bytecode['bytecode'].iloc[start_idx:end_idx]
-        batch_indices = bytecode['index'].iloc[start_idx:end_idx] 
+        batch_bytecodes = bytecode_df['bytecode'].iloc[start_idx:end_idx].tolist()
+        batch_indices = bytecode_df['index'].iloc[start_idx:end_idx].tolist()
 
-        
-        tokenized_texts = tokenizer(batch_bytecodes.tolist(), max_length=max_length, truncation= True, padding= 'max_length', return_tensors= 'pt')
+        tokenized_texts = tokenizer(
+            batch_bytecodes, 
+            max_length=max_length, 
+            truncation=True, 
+            padding='max_length', 
+            return_tensors='pt'
+        )
+
         with torch.no_grad():
-            outputs = modelBert(**tokenized_texts)
-        batch_embeddings = outputs.last_hidden_state.numpy()
+            outputs = model(**tokenized_texts)
+        
+        batch_embeddings = outputs.last_hidden_state.cpu().numpy()
 
-        #logger.info(f'embeding shape {batch_embeddings.shape}\n indices {batch_indices}\n')
         embedding.append(batch_embeddings)
-        indices.append(batch_indices)
+        indices.extend(batch_indices)
 
-    embedding = np.concatenate(embedding,axis =0)
-    indices = np.concatenate(indices,axis = 0)
+    # Combine batches for BERT embeddings
+    embedding = np.concatenate(embedding, axis=0)
+    indices = np.array(indices)
 
-    # Save 
-    logger.info(f'Saving embeddings to {embeddings_path}')
-    logger.info(f'Saving indices to {indices_path}')
-    logger.info(f'You now can using load_only=True param to load saved one without having to reprocess...')
+    # Opcode frequency analysis
+    opcodes = []
+    for code in tqdm(bytecode_df['bytecode'], desc="Converting bytecode to opcodes"):
+        opcodes.append(bytecode_to_opcodes(code))
+
+    all_opcodes = [op for sublist in opcodes for op in sublist]
+    opcode_vocab = sorted(set(all_opcodes))
+    vocab_size = len(opcode_vocab)
+
+    logger.info(f"Opcode vocabulary size: {vocab_size}")
+
+    opcode_to_idx = {op: idx for idx, op in enumerate(opcode_vocab)}
+    opcode_indices = []
+    for op_list in opcodes:
+        # Pad or truncate to max_opcodes
+        opcode_indices.append([opcode_to_idx[op] for op in op_list[:max_opcodes]] + 
+                              [0] * (max_opcodes - min(max_opcodes, len(op_list))))
+
+    # Compute frequency of opcodes
+    freq_dict = Counter(all_opcodes)
+    freq_vector = [freq_dict.get(op, 0) for op in opcode_vocab]
+
+    # Save results
+    logger.info(f"Saving results to {SAVE_PATH}")
+    os.makedirs(SAVE_PATH, exist_ok=True)
 
     with open(embeddings_path, 'wb') as f:
         pickle.dump(embedding, f)
     with open(indices_path, 'wb') as f:
         pickle.dump(indices, f)
+    with open(freq_path, 'wb') as f:
+        pickle.dump(freq_vector, f)
+    with open(vocab_path, 'wb') as f:
+        pickle.dump(opcode_vocab, f)
 
-    logger.info(f"Preprocessing complete. Total embeddings: {len(embedding)}")
+    logger.info("Preprocessing complete.")
     return embedding, indices
