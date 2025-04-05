@@ -555,7 +555,7 @@ def test(args, model, tokenizer, best_threshold=0):
     model.eval()
     logits=[]  
     y_trues=[]
-    for batch in eval_dataloader:
+    for batch in tqdm(eval_dataloader,desc="Testing:"):
         (inputs_ids,position_idx,attn_mask, 
         labels)=[x.to(args.device)  for x in batch]
         with torch.no_grad():
