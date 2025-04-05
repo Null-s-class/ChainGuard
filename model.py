@@ -54,7 +54,7 @@ class Model(nn.Module):
         padded_tensor = F.pad(tensor, (0, pad_size), "constant", 0)
         return padded_tensor
 
-    def forward(self, inputs_ids, position_idx, attn_mask, bytecode_embedding, opcode_tensor, labels=None):
+    def forward(self, inputs_ids, position_idx, attn_mask, labels=None):# bytecode_embedding, opcode_tensor, labels=None):
         bs, l = inputs_ids.size()
         
         # Embedding
@@ -80,17 +80,17 @@ class Model(nn.Module):
         # print('Position_idx', position_idx)
         # print('attn_mask',attn_mask)
 
-        inputs_embeddings[:, :opcode_tensor.size(1), :opcode_tensor.size(1)] += opcode_tensor.unsqueeze(2)
-        opcode_tensor =opcode_tensor.float()
+        #inputs_embeddings[:, :opcode_tensor.size(1), :opcode_tensor.size(1)] += opcode_tensor.unsqueeze(2)
+        #opcode_tensor =opcode_tensor.float()
         #opcode_transformed = self.opcode_dense(opcode_tensor)
 
-        opcode_transformed = opcode_tensor.unsqueeze(-1)  # [batch_size, 512, 1]
-        opcode_transformed = self.opcode_dense(opcode_transformed)  # [batch_size, 512, 768]
+        #opcode_transformed = opcode_tensor.unsqueeze(-1)  # [batch_size, 512, 1]
+        #opcode_transformed = self.opcode_dense(opcode_transformed)  # [batch_size, 512, 768]
         #print('Shape of opcode after transform', opcode_transformed.shape,'\n')
 
         #print('Shape of Inputs_embedidng', inputs_embeddings.shape)
         #Shape of inputs embeeing torch.Size([8, 640, 768])0700
-        inputs_embeddings = torch.cat([inputs_embeddings,bytecode_embedding,opcode_transformed],dim=1)
+        #inputs_embeddings = torch.cat([inputs_embeddings,bytecode_embedding,opcode_transformed],dim=1)
 
         #print('Shape final', inputs_embeddings.shape)
         #shape is [batch_size, 860,768]

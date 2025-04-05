@@ -88,7 +88,7 @@ class Model(nn.Module):
         opcode_transformed = self.opcode_dense(opcode_transformed)  # [batch_size, 512, 768]
 
         # Concatenate embeddings
-        inputs_embeddings = torch.cat([inputs_embeddings, bytecode_embedding, opcode_transformed], dim=1)
+        #inputs_embeddings = torch.cat([inputs_embeddings, bytecode_embedding, opcode_transformed], dim=1)
 
         # Expand attention mask and position indices
         attn_mask = self.expand_tensor_with_padding(attn_mask, inputs_embeddings.size(dim=1))
