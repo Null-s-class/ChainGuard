@@ -42,6 +42,9 @@ python run.py \
  --evaluate_during_training \
  --seed 123456 2>&1| tee saved_models/test.log -->
 
+![Static Badge](https://img.shields.io/badge/Docker_desktop-latest-cyan)
+![Static Badge](https://img.shields.io/badge/Python-3.10-blue)
+![Static Badge](https://img.shields.io/badge/CUDA-12.1-darkgreen)
  # ChainGuard
 
 ## 🚀 Tính năng nổi bật
@@ -91,19 +94,15 @@ Vào các thư mục tương ứng trong project.
 
 ## 🐳 Sử dụng Docker
 
-### 1. Build Docker image
-
-```bash
-docker-compose build
-
-```
-
-### 2. Chạy container
+### 1. Chạy container
 
 ```bash 
-docker-compose up -d
+docker-compose up --build
 ```
-### 3. Truy cập container
+
+* Có thể bỏ flag `--build` sau lần chạy đầu tiên. Chi tiết [Docker docs](https://docs.docker.com/compose/)
+
+### 2. Truy cập container
 
 ```bash
 docker exec -it <id/name container> /bin/bash
