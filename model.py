@@ -54,7 +54,7 @@ class Model(nn.Module):
         padded_tensor = F.pad(tensor, (0, pad_size), "constant", 0)
         return padded_tensor
 
-    def forward(self, inputs_ids, position_idx, attn_mask, labels=None):# bytecode_embedding, opcode_tensor, labels=None):
+    def forward(self, inputs_ids, position_idx, attn_mask, bytecode_embedding, labels=None):# bytecode_embedding, opcode_tensor, labels=None):
         bs, l = inputs_ids.size()
         
         # Embedding
@@ -91,7 +91,7 @@ class Model(nn.Module):
         #print('Shape of Inputs_embedidng', inputs_embeddings.shape)
         #Shape of inputs embeeing torch.Size([8, 640, 768])0700
         #inputs_embeddings = torch.cat([inputs_embeddings,bytecode_embedding,opcode_transformed],dim=1)
-
+        inputs_embeddings = torch.cat([inputs_embeddings,bytecode_embedding],dim=1)
         #print('Shape final', inputs_embeddings.shape)
         #shape is [batch_size, 860,768]
 
