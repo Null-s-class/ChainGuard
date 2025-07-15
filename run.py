@@ -15,7 +15,7 @@ import pandas as pd
 from torch.utils.data import DataLoader, Dataset, SequentialSampler, RandomSampler,TensorDataset
 from torch.utils.data.distributed import DistributedSampler
 from transformers import (WEIGHTS_NAME, AdamW, get_linear_schedule_with_warmup,
-                          RobertaConfig, RobertaForSequenceClassification, RobertaTokenizer, RobertaModel, BertModel, BertTokenizer)
+                          RobertaConfig, RobertaForSequenceClassification, RobertaTokenizer, RobertaModel, BertModel, BertTokenizer, AutoTokenizer, AutoModel)
 from tqdm import tqdm, trange
 import multiprocessing
 from model import Model
@@ -94,19 +94,19 @@ def extract_dataflow(code, parser,lang):
 class InputFeatures(object):
     """A single training/test features for an example."""
     def __init__(self, input_tokens, input_ids, position_idx, dfg_to_code,
-                  dfg_to_dfg, label, url):# bytecode_embedding, opcode_tensor, label, url):
+                  dfg_to_dfg, bytecode_embedding, label, url):# , opcode_tensor, label, url):
         self.input_tokens = input_tokens
         self.input_ids = input_ids
         self.position_idx = position_idx
         self.dfg_to_code = dfg_to_code
         self.dfg_to_dfg = dfg_to_dfg
-        #self.bytecode_embedding = bytecode_embedding
+        self.bytecode_embedding = bytecode_embedding
         #self.opcode_tensor = opcode_tensor
         self.label = label
         self.url = url
 
 def convert_examples_to_features(item):
-    url, label, tokenizer, args, cache, url_to_sourcecode = item #, bytecode_embedding, opcode_tensor = item
+    url, label, tokenizer, args, cache, url_to_sourcecode, bytecode_embedding = item #,  opcode_tensor = item
     #url index cua sourcode 
     #cache de luu lai cac ma nguon da trich xuat tranh trich xuat trung nhau 
     #url_to_sourcecoe ma nguon tuong ung voi index
@@ -156,35 +156,35 @@ def convert_examples_to_features(item):
     # logger.info('dfg_to_dfg',dfg_to_dfg)
     # logger.info('label',label)
     # logger.info('url',url)
-    return InputFeatures(source_tokens, source_ids, position_idx, dfg_to_code, dfg_to_dfg, label,url)#bytecode_embedding, opcode_tensor, label, url)
+    return InputFeatures(source_tokens, source_ids, position_idx, dfg_to_code, dfg_to_dfg, bytecode_embedding, label,url)#bytecode_embedding, opcode_tensor, label, url)
 
 
-# def preprocess_bytecode(bytecode, max_length = 512, batch_size = 32):
-#     tokenizer = BertTokenizer.from_pretrained('bert-base-cased')
-#     modelBert = BertModel.from_pretrained('bert-base-cased')
-#     embedding = [] # danh sach embedding
-#     indices = [] # danh sach index tuong ung
-#     num_sample = len(bytecode)
-#     num_batches = (num_sample + batch_size -1) // batch_size
-#     logger.info(f'Number of batch size {num_batches}')
+def preprocess_bytecode(bytecode, max_length = 512, batch_size = 32):
+    tokenizer = AutoTokenizer.from_pretrained('microsoft/codebert-base')
+    modelBert = AutoModel.from_pretrained('microsoft/codebert-base')
+    embedding = [] # danh sach embedding
+    indices = [] # danh sach index tuong ung
+    num_sample = len(bytecode)
+    num_batches = (num_sample + batch_size -1) // batch_size
+    logger.info(f'Number of batch size {num_batches}')
 
-#     for batch_idx in tqdm(range(num_batches)):
-#         start_idx = batch_idx * batch_size
-#         end_idx = min((batch_idx + 1) * batch_size, num_sample)
-#         batch_bytecodes = bytecode['bytecode'].iloc[start_idx:end_idx]
-#         batch_indices = bytecode['index'].iloc[start_idx:end_idx] 
-#         #logger.info(f'number of sample in a batch {end_idx-start_idx}')
-#         tokenized_texts = tokenizer(batch_bytecodes.tolist(), max_length=max_length, truncation= True, padding= 'max_length', return_tensors= 'pt')
-#         with torch.no_grad():
-#             outputs = modelBert(**tokenized_texts)
-#         batch_embeddings = outputs.last_hidden_state.numpy()
-#         #logger.info(f'embeding shape {batch_embeddings.shape}\n indices {batch_indices}\n')
-#         embedding.append(batch_embeddings)
-#         indices.append(batch_indices)
+    for batch_idx in tqdm(range(num_batches)):
+        start_idx = batch_idx * batch_size
+        end_idx = min((batch_idx + 1) * batch_size, num_sample)
+        batch_bytecodes = bytecode['bytecode'].iloc[start_idx:end_idx].fillna('')
+        batch_indices = bytecode['index'].iloc[start_idx:end_idx] 
+        #logger.info(f'number of sample in a batch {end_idx-start_idx}')
+        tokenized_texts = tokenizer(batch_bytecodes.tolist(), max_length=max_length, truncation= True, padding= 'max_length', return_tensors= 'pt')
+        with torch.no_grad():
+            outputs = modelBert(**tokenized_texts)
+        batch_embeddings = outputs.last_hidden_state.numpy()
+        #logger.info(f'embeding shape {batch_embeddings.shape}\n indices {batch_indices}\n')
+        embedding.append(batch_embeddings)
+        indices.append(batch_indices)
 
-#     embedding = np.concatenate(embedding,axis =0)
-#     indices = np.concatenate(indices,axis = 0)
-#     return embedding, indices
+    embedding = np.concatenate(embedding,axis =0)
+    indices = np.concatenate(indices,axis = 0)
+    return embedding, indices
 
 # def clean_opcode(opcode_str):
 #     #opcode_str = re.sub(r'0x[a-fA-F0-9]+', '', opcode_str)
@@ -222,18 +222,18 @@ class TextDataset(Dataset):
         index_to_sourcecode = {}
         index_to_bytecode = {}
         index_to_opcode = {}
-        with open('Data/Dataset/data.jsonl') as f: 
+        with open('Data/Mando-test/test-byte-set.jsonl') as f: 
             for line in f:
                 line=line.strip()
                 js=json.loads(line)
                 index_to_sourcecode[js['idx']]=js['source'] # load sourcode theo index
-                #index_to_bytecode[js['idx']] = js['byte'] # load bytecode theo index
+                index_to_bytecode[js['idx']] = js['byte'] # load bytecode theo index
                 #index_to_opcode[js['idx']] = js['codeop'] # load opcode theo index
             
         #chuyen bytecode ve Dataframe   
-        # df_bytecode = pd.DataFrame.from_dict(index_to_bytecode, orient='index', columns=['bytecode'])
-        # df_bytecode.index.name = 'index'
-        # df_bytecode.reset_index(inplace=True)
+        df_bytecode = pd.DataFrame.from_dict(index_to_bytecode, orient='index', columns=['bytecode'])
+        df_bytecode.index.name = 'index'
+        df_bytecode.reset_index(inplace=True)
         
         #chuyen opcode ve Dataframe
         # df_opcode =pd.DataFrame.from_dict(index_to_opcode, orient='index', columns=['opcode'])
@@ -246,11 +246,11 @@ class TextDataset(Dataset):
         #logger.info('loaded Data')
         #logger.info('df_bytecode :n%s', df_bytecode)
 
-       # bytecode_embedding, bytecode_index = preprocess_bytecode(df_bytecode,max_length=20) #embedding bytecode
-        #print('Processed bytecode')
+        bytecode_embedding, bytecode_index = preprocess_bytecode(df_bytecode,max_length=20) #embedding bytecode
+        print('Processed bytecode')
         #logger.info('byte code embedding%s', bytecode_embedding.shape,'\n')
         #logger.info('bytecode index%s',bytecode_index,'\n')
-        #embedding_dict = {index : embedding for index, embedding in zip(bytecode_index, bytecode_embedding)}
+        embedding_dict = {index : embedding for index, embedding in zip(bytecode_index, bytecode_embedding)}
 
         #logger.info('Bytecode embeding%s', embedding_dict)
         #load code function according to index
@@ -262,13 +262,13 @@ class TextDataset(Dataset):
                 line=line.strip()
                 url1,labels =line.split(' ', 1) # la indx cua tung function
                 labels = [int(label) for label in labels.split()] # convert labels tahnh mang [1,0,1,0]
-                if url1 not in index_to_sourcecode: #or url1 not in index_to_bytecode or url1 not in index_to_opcode:
+                if url1 not in index_to_sourcecode or url1 not in index_to_bytecode: #or url1 not in index_to_opcode:
                     continue
-                #embedding_code = embedding_dict[url1]
+                embedding_code = embedding_dict[url1]
                 #opcode_tensor = opcode_matrix[url1]
                 #if embedding_code is None:
                  #   logger.info('Key invalid')
-                data_source.append((url1,labels,tokenizer, args,cache,index_to_sourcecode))#,embedding_code, opcode_tensor))
+                data_source.append((url1,labels,tokenizer, args,cache,index_to_sourcecode,embedding_code))#, opcode_tensor))
                 
         #only use 10% valid data_source to keep best model        
         if 'valid' in file_path:
@@ -326,7 +326,7 @@ class TextDataset(Dataset):
         out_position_ids =  torch.tensor(self.examples[item].position_idx)
         out_attn_mask =   torch.tensor(attn_mask_1)
         out_labels = torch.tensor(self.examples[item].label)
-        #out_bytecode_embedding = torch.tensor(self.examples[item].bytecode_embedding) # la 1 tensor co shape la [20,768]
+        out_bytecode_embedding = torch.tensor(self.examples[item].bytecode_embedding) # la 1 tensor co shape la [20,768]
         #out_opcode_tensor = self.examples[item].opcode_tensor
         # logger.info('out_input_ids',out_input_ids.shape)
         # logger.info('out_postion_ids',out_position_ids.shape)
@@ -337,7 +337,7 @@ class TextDataset(Dataset):
         return (torch.tensor(self.examples[item].input_ids),
                 torch.tensor(self.examples[item].position_idx),
                 torch.tensor(attn_mask_1),    
-                #out_bytecode_embedding,
+                out_bytecode_embedding,
                 #out_opcode_tensor,         
                 torch.tensor(self.examples[item].label))
 
@@ -424,10 +424,10 @@ def train(args,train_dataset, model, tokenizer):
         tr_num=0
         train_loss=0
         for step, batch in enumerate(bar):
-            (inputs_ids,position_idx,attn_mask,
+            (inputs_ids,position_idx,attn_mask, bytecode_embedding,
             labels)=[x.to(args.device)  for x in batch]
             model.train()
-            loss,logits = model(inputs_ids,position_idx,attn_mask, labels)
+            loss,logits = model(inputs_ids,position_idx,attn_mask, bytecode_embedding, labels)
 
             if args.n_gpu > 1:
                 loss = loss.mean()
@@ -499,10 +499,10 @@ def evaluate(args, model, tokenizer, eval_when_training=False):
     all_labels = []
     all_preds = []
     for batch in tqdm(eval_dataloader,desc="Evaluating"):
-        (inputs_ids,position_idx,attn_mask, 
+        (inputs_ids,position_idx,attn_mask, bytecode_embedding,
         labels)=[x.to(args.device)  for x in batch]
         with torch.no_grad():
-            lm_loss,logit = model(inputs_ids,position_idx,attn_mask, labels)
+            lm_loss,logit = model(inputs_ids,position_idx,attn_mask, bytecode_embedding, labels)
             eval_loss += lm_loss.mean().item()
             logits.append(logit.cpu().numpy())
             y_trues.append(labels.cpu().numpy())
@@ -556,10 +556,10 @@ def test(args, model, tokenizer, best_threshold=0):
     logits=[]  
     y_trues=[]
     for batch in tqdm(eval_dataloader,desc="Testing:"):
-        (inputs_ids,position_idx,attn_mask, 
+        (inputs_ids,position_idx,attn_mask, bytecode_embedding,
         labels)=[x.to(args.device)  for x in batch]
         with torch.no_grad():
-            lm_loss,logit = model(inputs_ids,position_idx,attn_mask, labels)
+            lm_loss,logit = model(inputs_ids,position_idx,attn_mask, bytecode_embedding, labels)
             eval_loss += lm_loss.mean().item()
             logits.append(logit.cpu().numpy())
             y_trues.append(labels.cpu().numpy())
@@ -569,14 +569,29 @@ def test(args, model, tokenizer, best_threshold=0):
     logits=np.concatenate(logits, axis = 0)
     y_trues=np.concatenate(y_trues,axis = 0)
     y_preds=logits
-    recall=recall_score(y_trues, y_preds, average='weighted')
-    precision=precision_score(y_trues, y_preds,  average='weighted')   
-    f1=f1_score(y_trues, y_preds, average='weighted')      
+    
+    weighted_recall=recall_score(y_trues, y_preds, average='weighted')
+    weighted_precision=precision_score(y_trues, y_preds,  average='weighted')   
+    weighted_f1=f1_score(y_trues, y_preds, average='weighted')   
+
+    micro_recall=recall_score(y_trues, y_preds, average='micro')
+    micro_precision=precision_score(y_trues, y_preds,  average='micro')   
+    micro_f1=f1_score(y_trues, y_preds, average='micro') 
+    
+    macro_recall=recall_score(y_trues, y_preds, average='macro')
+    macro_precision=precision_score(y_trues, y_preds,  average='macro')   
+    macro_f1=f1_score(y_trues, y_preds, average='macro') 
     accuracy = accuracy_score(y_trues, y_preds)
     result = {
-        "Test_recall": float(recall),
-        "Test_precision": float(precision),
-        "Test_f1": float(f1),
+        "Test_micro_recall": float(micro_recall),
+        "Test_micro_precision": float(micro_precision),
+        "Test_micro_f1": float(micro_f1),
+        "Test_macro_recall": float(macro_recall),
+        "Test_macro_precision": float(macro_precision),
+        "Test_macro_f1": float(macro_f1),
+        "Test_weighted_recall": float(weighted_recall),
+        "Test_weighted_precision": float(weighted_precision),
+        "Test_weighted_f1": float(weighted_f1),
         "Test_accuracy": float(accuracy)
     }
 
@@ -590,7 +605,7 @@ def main():
     parser = argparse.ArgumentParser()
 
     ## Required parameters
-    parser.add_argument("--train_data_file", default=None, type=str, required=True,
+    parser.add_argument("--train_data_file", default=None, type=str,
                         help="The input training data file (a text file).")
     parser.add_argument("--output_dir", default=None, type=str, required=True,
                         help="The output directory where the model predictions and checkpoints will be written.")
